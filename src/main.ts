@@ -216,8 +216,6 @@ class Game {
       this.triggerScreenShake(intensity);
     };
 
-    this.uiManager = new UIManager(this.player, this.weaponManager, this.enemyManager, this.gameState);
-
     this.uiManager.onPresetChange = (preset) => {
       this.setGraphicsPreset(preset);
     };

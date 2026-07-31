@@ -349,6 +349,7 @@ export class UIManager {
     
     const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     this.btnOpenHudEditorHud.style.display = isMobile ? 'block' : 'none';
+    this.loadCustomHUDLayout();
   }
 
   showPauseMenu() {
