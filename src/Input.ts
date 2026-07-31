@@ -226,6 +226,7 @@ export class Input {
       }
     };
 
+    mapButton('btn-mobile-nextweapon', () => this.keys['q'] = true, () => this.keys['q'] = false);
     mapButton('btn-mobile-jump', () => this.keys[' '] = true, () => this.keys[' '] = false);
     mapButton('btn-mobile-reload', () => this.keys['r'] = true, () => this.keys['r'] = false);
     mapButton('btn-mobile-grenade', () => this.keys['g'] = true, () => this.keys['g'] = false);

@@ -206,6 +206,8 @@
 
       <!-- In-Game HUD -->
       <div id="game-hud">
+        <!-- In-game HUD editor shortcut button (visible on mobile during match) -->
+        <button id="btn-open-hud-editor-hud" class="mobile-action-btn" style="position: absolute; top: 15px; right: 175px; z-index: 100; display: none; width: 45px; height: 45px; font-size: 9px; border-color: var(--color-primary); color: var(--color-primary); background: rgba(12,24,27,0.85);">EDIT</button>
         <!-- Multiplayer Scores HUD -->
         <div id="hud-multiplayer-scores" style="display: none;">
           <div class="score-display-item alpha">
@@ -362,8 +364,8 @@
           </div>
         </div>
 
-        <!-- Right Action Buttons -->
         <div id="mobile-actions-container">
+          <button id="btn-mobile-nextweapon" class="mobile-action-btn">WEAP</button>
           <button id="btn-mobile-jump" class="mobile-action-btn">JUMP</button>
           <button id="btn-mobile-reload" class="mobile-action-btn">RELOAD</button>
           <button id="btn-mobile-grenade" class="mobile-action-btn">GREN</button>

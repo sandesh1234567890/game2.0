@@ -92,13 +92,16 @@ export class UIManager {
   public hudEditPanel = document.getElementById('hud-edit-panel')!;
   public btnHudSave = document.getElementById('btn-hud-save')!;
   public btnHudReset = document.getElementById('btn-hud-reset')!;
+  public btnOpenHudEditorHud = document.getElementById('btn-open-hud-editor-hud')!;
   private draggableIds = [
     'mobile-joystick-container',
     'btn-mobile-jump',
     'btn-mobile-reload',
     'btn-mobile-grenade',
     'btn-mobile-ads',
-    'btn-mobile-shoot'
+    'btn-mobile-shoot',
+    'btn-mobile-nextweapon',
+    'btn-open-hud-editor-hud'
   ];
   private touchListeners: { [id: string]: { start: any; move: any } } = {};
 
@@ -243,6 +246,13 @@ export class UIManager {
       e.stopPropagation();
       this.resetHUDLayout();
     });
+
+    // In-game HUD customization listener
+    this.btnOpenHudEditorHud.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.hudEditPanel.style.display = 'flex';
+      this.startHUDEditMode();
+    });
   }
 
   private updateMenuStats() {
@@ -328,6 +338,7 @@ export class UIManager {
     this.hudContainer.style.display = 'none';
     this.pauseMenu.classList.remove('active');
     this.gameOverScreen.classList.remove('active');
+    this.btnOpenHudEditorHud.style.display = 'none';
   }
 
   showHUD() {
@@ -335,6 +346,9 @@ export class UIManager {
     this.hudContainer.style.display = 'block';
     this.pauseMenu.classList.remove('active');
     this.gameOverScreen.classList.remove('active');
+    
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    this.btnOpenHudEditorHud.style.display = isMobile ? 'block' : 'none';
   }
 
   showPauseMenu() {
@@ -349,6 +363,7 @@ export class UIManager {
     this.hudContainer.style.display = 'none';
     this.pauseMenu.classList.remove('active');
     this.gameOverScreen.classList.add('active');
+    this.btnOpenHudEditorHud.style.display = 'none';
 
     this.endKills.textContent = this.enemyManager.kills.toString();
     this.endDeaths.textContent = this.enemyManager.deaths.toString();
@@ -540,7 +555,11 @@ export class UIManager {
 
   private exitHUDEditMode() {
     this.hudEditPanel.style.display = 'none';
-    this.pauseMenu.classList.add('active');
+    
+    // Only show pause menu if we were already paused
+    if (this.hudContainer.style.display !== 'block') {
+      this.pauseMenu.classList.add('active');
+    }
 
     this.draggableIds.forEach(id => {
       const el = document.getElementById(id);

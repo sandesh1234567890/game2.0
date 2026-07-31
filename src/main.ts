@@ -54,6 +54,7 @@ class Game {
   private visionMode: VisionMode = 'normal';
   private nKeyReleased = true;
   private gKeyReleased = true;
+  private qKeyReleased = true;
 
   // Screen shake
   private shakeIntensity = 0;
@@ -642,6 +643,20 @@ class Game {
         if (this.input.keys['3']) this.weaponManager.selectWeapon('sniper');
         if (this.input.keys['4']) this.weaponManager.selectWeapon('shotgun');
         if (this.input.keys['5']) this.weaponManager.selectWeapon('pistol');
+
+        // Cycle weapon (Q key or mobile cycle button)
+        if (this.input.keys['q']) {
+          if (this.qKeyReleased) {
+            this.qKeyReleased = false;
+            const weapons: ('rifle' | 'smg' | 'sniper' | 'shotgun' | 'pistol')[] = ['rifle', 'smg', 'sniper', 'shotgun', 'pistol'];
+            const currentIdx = weapons.indexOf(this.weaponManager.currentWeaponKey as any);
+            const nextIdx = (currentIdx + 1) % weapons.length;
+            this.weaponManager.selectWeapon(weapons[nextIdx]);
+            this.uiManager.addNotification(`Equipped: ${this.weaponManager.getCurrentWeapon().name}`);
+          }
+        } else {
+          this.qKeyReleased = true;
+        }
 
         // Vision mode toggle (N key)
         if (this.input.keys['n']) {
