@@ -93,10 +93,17 @@ export class UIManager {
     presetButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        presetButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
         const preset = btn.getAttribute('data-preset')! as 'low' | 'medium' | 'ultra';
+        
+        // Sync active state across all buttons of the same preset
+        presetButtons.forEach(b => {
+          if (b.getAttribute('data-preset') === preset) {
+            b.classList.add('active');
+          } else {
+            b.classList.remove('active');
+          }
+        });
+        
         if (this.onPresetChange) {
           this.onPresetChange(preset);
         }

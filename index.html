@@ -103,7 +103,17 @@
         <div class="pause-content">
           <h2>SIMULATION PAUSED</h2>
           <p>Click anywhere on the screen to resume simulation</p>
-          <div style="display: flex; gap: 20px; justify-content: center; margin-top: 30px;">
+          
+          <div class="pause-presets-selector" style="margin-top: 15px;">
+            <h3 style="font-size: 13px; letter-spacing: 2px; color: #8899a6; margin-bottom: 12px; text-transform: uppercase;">Graphics quality</h3>
+            <div class="preset-options">
+              <button class="preset-btn" data-preset="low">LOW</button>
+              <button class="preset-btn active" data-preset="medium">MEDIUM</button>
+              <button class="preset-btn" data-preset="ultra">ULTRA</button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 20px; justify-content: center; margin-top: 20px;">
             <button id="btn-resume" class="menu-btn primary">RESUME</button>
             <button id="btn-restart-pause" class="menu-btn danger">RESTART MISSION</button>
           </div>
