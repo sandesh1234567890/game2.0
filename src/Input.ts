@@ -229,7 +229,58 @@ export class Input {
     mapButton('btn-mobile-jump', () => this.keys[' '] = true, () => this.keys[' '] = false);
     mapButton('btn-mobile-reload', () => this.keys['r'] = true, () => this.keys['r'] = false);
     mapButton('btn-mobile-grenade', () => this.keys['g'] = true, () => this.keys['g'] = false);
-    mapButton('btn-mobile-shoot', () => this.mouse.left = true, () => this.mouse.left = false);
+    
+    // Map shoot button with dual Fire + Aim drag action
+    const shootBtn = document.getElementById('btn-mobile-shoot')!;
+    let shootTouchId: number | null = null;
+    const lastShootPos = { x: 0, y: 0 };
+
+    shootBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.mouse.left = true;
+      
+      const touch = e.changedTouches[0];
+      shootTouchId = touch.identifier;
+      lastShootPos.x = touch.clientX;
+      lastShootPos.y = touch.clientY;
+    }, { passive: false });
+
+    shootBtn.addEventListener('touchmove', (e) => {
+      if (shootTouchId === null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      for (let i = 0; i < e.touches.length; i++) {
+        const touch = e.touches[i];
+        if (touch.identifier === shootTouchId) {
+          const dx = touch.clientX - lastShootPos.x;
+          const dy = touch.clientY - lastShootPos.y;
+          
+          this.mouseMovement.x += dx * 1.6;
+          this.mouseMovement.y += dy * 1.6;
+          
+          lastLookPos.x = touch.clientX; // sync with global looking pos to avoid visual jumps
+          lastLookPos.y = touch.clientY;
+          
+          lastShootPos.x = touch.clientX;
+          lastShootPos.y = touch.clientY;
+          break;
+        }
+      }
+    }, { passive: false });
+
+    const endShoot = (e: TouchEvent) => {
+      if (shootTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === shootTouchId) {
+          this.mouse.left = false;
+          shootTouchId = null;
+          break;
+        }
+      }
+    };
+    shootBtn.addEventListener('touchend', endShoot, { passive: false });
+    shootBtn.addEventListener('touchcancel', endShoot, { passive: false });
     
     // Toggle ADS
     const adsBtn = document.getElementById('btn-mobile-ads')!;

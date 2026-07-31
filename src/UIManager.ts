@@ -87,6 +87,21 @@ export class UIManager {
   public btnCopyCode = document.getElementById('btn-copy-code')!;
   public btnReadyLobby = document.getElementById('btn-ready-lobby')!;
 
+  // Custom HUD elements
+  public btnOpenHudEditor = document.getElementById('btn-open-hud-editor')!;
+  public hudEditPanel = document.getElementById('hud-edit-panel')!;
+  public btnHudSave = document.getElementById('btn-hud-save')!;
+  public btnHudReset = document.getElementById('btn-hud-reset')!;
+  private draggableIds = [
+    'mobile-joystick-container',
+    'btn-mobile-jump',
+    'btn-mobile-reload',
+    'btn-mobile-grenade',
+    'btn-mobile-ads',
+    'btn-mobile-shoot'
+  ];
+  private touchListeners: { [id: string]: { start: any; move: any } } = {};
+
   // Internal states
   private hitmarkerTimeout: number | null = null;
   private damageFlashAlpha = 0;
@@ -101,6 +116,7 @@ export class UIManager {
 
     this.setupMenuListeners();
     this.updateMenuStats();
+    this.loadCustomHUDLayout();
   }
 
   private setupMenuListeners() {
@@ -208,6 +224,24 @@ export class UIManager {
     this.btnStartMultiplayer.addEventListener('click', (e) => {
       e.stopPropagation();
       if (this.onStartMatchClick) this.onStartMatchClick();
+    });
+
+    // HUD Customization Editor listeners
+    this.btnOpenHudEditor.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.pauseMenu.classList.remove('active');
+      this.hudEditPanel.style.display = 'flex';
+      this.startHUDEditMode();
+    });
+
+    this.btnHudSave.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.saveHUDLayout();
+    });
+
+    this.btnHudReset.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.resetHUDLayout();
     });
   }
 
@@ -465,5 +499,111 @@ export class UIManager {
   public updateScoresUI(alphaScore: number, bravoScore: number) {
     this.scoreAlphaValue.textContent = alphaScore.toString();
     this.scoreBravoValue.textContent = bravoScore.toString();
+  }
+
+  // HUD Customization Editor logic
+  private startHUDEditMode() {
+    this.draggableIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      el.classList.add('hud-editing-active');
+
+      let dragOffset = { x: 0, y: 0 };
+
+      const onTouchStart = (e: TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const touch = e.touches[0];
+        const rect = el.getBoundingClientRect();
+        dragOffset.x = touch.clientX - rect.left;
+        dragOffset.y = touch.clientY - rect.top;
+      };
+
+      const onTouchMove = (e: TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const touch = e.touches[0];
+
+        el.style.left = `${touch.clientX - dragOffset.x}px`;
+        el.style.top = `${touch.clientY - dragOffset.y}px`;
+        el.style.bottom = 'auto';
+        el.style.right = 'auto';
+      };
+
+      el.addEventListener('touchstart', onTouchStart, { passive: false });
+      el.addEventListener('touchmove', onTouchMove, { passive: false });
+
+      this.touchListeners[id] = { start: onTouchStart, move: onTouchMove };
+    });
+  }
+
+  private exitHUDEditMode() {
+    this.hudEditPanel.style.display = 'none';
+    this.pauseMenu.classList.add('active');
+
+    this.draggableIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      el.classList.remove('hud-editing-active');
+
+      const listeners = this.touchListeners[id];
+      if (listeners) {
+        el.removeEventListener('touchstart', listeners.start);
+        el.removeEventListener('touchmove', listeners.move);
+      }
+    });
+    this.touchListeners = {};
+  }
+
+  private saveHUDLayout() {
+    const layout: { [id: string]: { left: string; top: string } } = {};
+    this.draggableIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        layout[id] = {
+          left: el.style.left,
+          top: el.style.top
+        };
+      }
+    });
+
+    localStorage.setItem('aether-hud-layout', JSON.stringify(layout));
+    this.exitHUDEditMode();
+    this.addNotification("💾 Custom HUD layout saved!");
+  }
+
+  private resetHUDLayout() {
+    localStorage.removeItem('aether-hud-layout');
+    
+    this.draggableIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.left = '';
+        el.style.top = '';
+        el.style.bottom = '';
+        el.style.right = '';
+      }
+    });
+
+    this.exitHUDEditMode();
+    this.addNotification("🔄 HUD layout reset to default.");
+  }
+
+  public loadCustomHUDLayout() {
+    const data = localStorage.getItem('aether-hud-layout');
+    if (data) {
+      const positions = JSON.parse(data);
+      Object.keys(positions).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.left = positions[id].left;
+          el.style.top = positions[id].top;
+          el.style.bottom = 'auto';
+          el.style.right = 'auto';
+        }
+      });
+    }
   }
 }

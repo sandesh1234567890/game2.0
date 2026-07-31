@@ -15,6 +15,14 @@
 
     <!-- UI Overlay Wrapper -->
     <div id="ui-container">
+      <!-- HUD Edit Panel Overlay -->
+      <div id="hud-edit-panel" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 60px; background: rgba(12,24,27,0.95); border-bottom: 2px solid var(--color-primary); z-index: 1000; align-items: center; justify-content: space-between; padding: 0 30px; font-family: var(--font-hud);">
+        <div style="font-weight: 700; letter-spacing: 1px; color: var(--color-primary); font-size: 13px;">HUD EDIT MODE — DRAG BUTTONS TO CUSTOMIZE</div>
+        <div style="display: flex; gap: 15px;">
+          <button id="btn-hud-reset" class="menu-btn danger" style="padding: 6px 15px; font-size: 11px; margin: 0;">RESET</button>
+          <button id="btn-hud-save" class="menu-btn primary" style="padding: 6px 20px; font-size: 11px; margin: 0;">SAVE</button>
+        </div>
+      </div>
       
       <!-- Damage / Low Health Vignettes -->
       <div id="damage-vignette" class="vignette"></div>
@@ -186,6 +194,8 @@
               <button class="preset-btn" data-preset="ultra">ULTRA</button>
             </div>
           </div>
+          
+          <button id="btn-open-hud-editor" class="menu-btn" style="display: none; width: 100%; margin-top: 15px; border-color: var(--color-primary); color: var(--color-primary);">CUSTOMIZE HUD LAYOUT</button>
 
           <div style="display: flex; gap: 20px; justify-content: center; margin-top: 20px;">
             <button id="btn-resume" class="menu-btn primary">RESUME</button>

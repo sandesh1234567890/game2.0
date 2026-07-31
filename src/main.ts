@@ -304,6 +304,9 @@ class Game {
   }
 
   private setupControlBindings() {
+    // Show Customize HUD button if mobile
+    this.uiManager.btnOpenHudEditor.style.display = this.input.isMobile ? 'block' : 'none';
+
     document.getElementById('btn-start')!.addEventListener('click', () => {
       this.startGame();
     });

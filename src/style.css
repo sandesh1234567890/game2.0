@@ -1438,3 +1438,18 @@ body, html {
     gap: 15px !important;
   }
 }
+
+/* Edit Mode Highlighting */
+.hud-editing-active {
+  border: 2px dashed #00ffcc !important;
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.4) !important;
+  animation: pulse-edit-border 1.5s infinite ease-in-out;
+  cursor: move !important;
+  pointer-events: auto !important;
+}
+
+@keyframes pulse-edit-border {
+  0% { border-color: rgba(0, 255, 204, 0.4); }
+  50% { border-color: rgba(0, 255, 204, 1.0); }
+  100% { border-color: rgba(0, 255, 204, 0.4); }
+}
