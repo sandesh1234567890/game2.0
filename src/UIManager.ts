@@ -563,6 +563,7 @@ export class UIManager {
         el.style.top = `${pctY}%`;
         el.style.bottom = 'auto';
         el.style.right = 'auto';
+        el.dataset.dragged = "true";
       };
 
       el.addEventListener('touchstart', onTouchStart, { passive: false });
@@ -607,7 +608,7 @@ export class UIManager {
     const layout: { [id: string]: { left: string; top: string } } = {};
     this.draggableIds.forEach(id => {
       const el = document.getElementById(id);
-      if (el && el.style.left && el.style.top) {
+      if (el && el.dataset.dragged === "true") {
         layout[id] = {
           left: el.style.left,
           top: el.style.top
@@ -630,6 +631,7 @@ export class UIManager {
         el.style.top = '';
         el.style.bottom = '';
         el.style.right = '';
+        delete el.dataset.dragged;
       }
     });
 
@@ -648,6 +650,7 @@ export class UIManager {
           el.style.top = positions[id].top;
           el.style.bottom = 'auto';
           el.style.right = 'auto';
+          el.dataset.dragged = "true";
         }
       });
     }
