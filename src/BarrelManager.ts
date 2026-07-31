@@ -23,6 +23,7 @@ export class BarrelManager {
 
   public barrels: Barrel[] = [];
   public collisionBoxes: THREE.Box3[] = []; // for player/enemy movement collision
+  public onExplosion?: (intensity: number) => void;
 
   private spawnPoints: THREE.Vector3[] = [];
 
@@ -250,6 +251,13 @@ export class BarrelManager {
       knockbackForce.y = 4.0 * (1.0 - distToPlayer / blastRadius); // slight pop up in the air
       
       this.player.applyKnockback(knockbackForce);
+    }
+
+    // Trigger screen shake callback based on distance to player
+    const maxShakeRadius = 16.0;
+    if (distToPlayer < maxShakeRadius && this.onExplosion) {
+      const shakeAmount = 0.85 * (1.0 - distToPlayer / maxShakeRadius);
+      this.onExplosion(shakeAmount);
     }
 
     // 3. Chain reactions: detonate nearby barrels

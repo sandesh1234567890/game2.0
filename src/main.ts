@@ -203,6 +203,15 @@ class Game {
     this.fxManager = new FXManager(this.scene);
     this.barrelManager = new BarrelManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth);
     this.grenadeManager = new GrenadeManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth, this.barrelManager, this.allCollisionBoxes);
+    
+    // Connect explosion callbacks to camera shake
+    this.barrelManager.onExplosion = (intensity) => {
+      this.triggerScreenShake(intensity);
+    };
+    this.grenadeManager.onExplosion = (intensity) => {
+      this.triggerScreenShake(intensity);
+    };
+
     this.uiManager = new UIManager(this.player, this.weaponManager, this.enemyManager, this.gameState);
 
     this.uiManager.onPresetChange = (preset) => {
@@ -479,6 +488,7 @@ class Game {
           if (isEnemy) {
             this.audioSynth.playDamage();
             this.uiManager.triggerDamageFlash();
+            this.triggerScreenShake(0.18); // Screen shake on hit
           }
         });
         this.fxManager.update(dt);
@@ -512,6 +522,7 @@ class Game {
           if (this.gKeyReleased && this.player.grenades > 0 && !this.weaponManager.isReloading && !this.weaponManager.isThrowing) {
             this.gKeyReleased = false;
             this.weaponManager.playThrowAnimation(0.5);
+            this.triggerScreenShake(0.08); // Slight jolt on throw
             
             // Throw grenade projectile after weapon starts lowering (e.g. 0.15s delay)
             setTimeout(() => {

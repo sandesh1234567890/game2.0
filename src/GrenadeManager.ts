@@ -25,6 +25,7 @@ export class GrenadeManager {
 
   private grenades: GrenadeProjectile[] = [];
   private trailTimer = 0;
+  public onExplosion?: (intensity: number) => void;
   
   // Reusable bounding box for collision detection
   private _grenadeBox = new THREE.Box3();
@@ -295,6 +296,13 @@ export class GrenadeManager {
       knockbackForce.y = 3.5 * (1.0 - distToPlayer / blastRadius);
 
       this.player.applyKnockback(knockbackForce);
+    }
+
+    // Trigger screen shake callback based on distance to player
+    const maxShakeRadius = 16.0;
+    if (distToPlayer < maxShakeRadius && this.onExplosion) {
+      const shakeAmount = 0.75 * (1.0 - distToPlayer / maxShakeRadius);
+      this.onExplosion(shakeAmount);
     }
   }
 
