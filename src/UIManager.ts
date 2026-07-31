@@ -92,6 +92,7 @@ export class UIManager {
   public hudEditPanel = document.getElementById('hud-edit-panel')!;
   public btnHudSave = document.getElementById('btn-hud-save')!;
   public btnHudReset = document.getElementById('btn-hud-reset')!;
+  public btnHudCancel = document.getElementById('btn-hud-cancel')!;
   public btnOpenHudEditorHud = document.getElementById('btn-open-hud-editor-hud')!;
   private draggableIds = [
     'mobile-joystick-container',
@@ -245,6 +246,11 @@ export class UIManager {
     this.btnHudReset.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetHUDLayout();
+    });
+
+    this.btnHudCancel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.cancelHUDLayout();
     });
 
     // In-game HUD customization listener
@@ -654,5 +660,22 @@ export class UIManager {
         }
       });
     }
+  }
+
+  private cancelHUDLayout() {
+    // Revert styling changes by clearing inline coordinates and reloading saved coordinates
+    this.draggableIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.left = '';
+        el.style.top = '';
+        el.style.bottom = '';
+        el.style.right = '';
+        delete el.dataset.dragged;
+      }
+    });
+    this.loadCustomHUDLayout();
+    this.exitHUDEditMode();
+    this.addNotification("❌ Edits discarded.");
   }
 }
