@@ -42,6 +42,7 @@ class Game {
 
   // State Management
   private isPlaying = false;
+  private isGameOver = false;
   private visionMode: VisionMode = 'normal';
   private nKeyReleased = true;
 
@@ -232,6 +233,7 @@ class Game {
 
   private startGame() {
     this.isPlaying = true;
+    this.isGameOver = false;
     this.gameState.resetSession();
     this.gameState.currentWave = 1;
     this.gameState.waveActive = true;
@@ -243,6 +245,7 @@ class Game {
   }
 
   private restartGame() {
+    this.isGameOver = false;
     this.player.reset();
     this.weaponManager.selectWeapon(this.weaponManager.currentWeaponKey);
     const curWep = this.weaponManager.getCurrentWeapon();
@@ -495,6 +498,7 @@ class Game {
           this.gameState.updateBestScores(this.enemyManager.kills);
           this.gameState.commitSession();
           this.isPlaying = false;
+          this.isGameOver = true;
           this.input.exitLock();
           this.uiManager.showGameOver(false);
         }
@@ -502,7 +506,7 @@ class Game {
       } else {
         this.uiManager.showPauseMenu();
       }
-    } else {
+    } else if (!this.isGameOver) {
       this.uiManager.showMainMenu();
     }
 
