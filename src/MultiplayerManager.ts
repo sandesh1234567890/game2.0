@@ -184,16 +184,17 @@ export class MultiplayerManager {
           this.remotePlayers[peerId].isReady = packet.isReady;
           if (this.isHost) {
             this.broadcastLobbySync();
+            this.relayToOthers(peerId, packet);
           }
           this.updateLobbyList();
         }
         break;
-
+ 
       case 'start_match':
         this.matchActive = true;
         if (this.onMatchStartSignal) this.onMatchStartSignal();
         break;
-
+ 
       case 'state':
         const rp = this.remotePlayers[peerId];
         if (rp) {
@@ -207,9 +208,13 @@ export class MultiplayerManager {
           if (!rp.mesh && this.matchActive) {
             this.createRemotePlayerMesh(rp);
           }
+
+          if (this.isHost) {
+            this.relayToOthers(peerId, packet);
+          }
         }
         break;
-
+ 
       case 'shoot':
         const isEnemy = packet.team !== this.localTeam;
         if (this.onRemoteShot) {
@@ -219,8 +224,11 @@ export class MultiplayerManager {
             isEnemy
           );
         }
+        if (this.isHost) {
+          this.relayToOthers(peerId, packet);
+        }
         break;
-
+ 
       case 'grenade':
         if (this.onRemoteGrenade) {
           this.onRemoteGrenade(
@@ -228,17 +236,25 @@ export class MultiplayerManager {
             new THREE.Vector3(packet.dir.x, packet.dir.y, packet.dir.z)
           );
         }
+        if (this.isHost) {
+          this.relayToOthers(peerId, packet);
+        }
         break;
-
+ 
       case 'damage':
-        // Someone tells us they hit us
         if (packet.targetId === this.localId && this.onLocalDamage) {
           this.onLocalDamage(packet.damage);
         }
+        if (this.isHost) {
+          // Relay damage to target client!
+          const conn = this.connections[packet.targetId];
+          if (conn && conn.open) {
+            conn.send(packet);
+          }
+        }
         break;
-
+ 
       case 'kill':
-        // A player was killed, sync scores
         this.teamAlphaScore = packet.alphaScore;
         this.teamBravoScore = packet.bravoScore;
         if (this.onScoreUpdate) {
@@ -290,9 +306,14 @@ export class MultiplayerManager {
       targetId,
       damage
     };
-    // Send to target connection directly or broadcast
     if (this.connections[targetId]) {
       this.connections[targetId].send(packet);
+    } else {
+      // Send to host connection so host can relay it to the target client!
+      const hostId = `peer-${this.roomCode}-host`;
+      if (this.connections[hostId]) {
+        this.connections[hostId].send(packet);
+      }
     }
   }
 
@@ -440,6 +461,18 @@ export class MultiplayerManager {
         // Smoothly lerp heading rotation
         rp.rotationY = THREE.MathUtils.lerp(rp.rotationY, rp.targetRotationY, 16 * dt);
         rp.mesh.rotation.y = rp.rotationY;
+      }
+    });
+  }
+
+  private relayToOthers(senderId: string, packet: any) {
+    if (!this.isHost) return;
+    Object.keys(this.connections).forEach(id => {
+      if (id !== senderId) {
+        const conn = this.connections[id];
+        if (conn && conn.open) {
+          conn.send(packet);
+        }
       }
     });
   }
