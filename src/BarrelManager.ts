@@ -24,17 +24,7 @@ export class BarrelManager {
   public barrels: Barrel[] = [];
   public collisionBoxes: THREE.Box3[] = []; // for player/enemy movement collision
 
-  // Fixed positions next to level pillars
-  private spawnPoints = [
-    new THREE.Vector3(-15, 0.8, -12.5),
-    new THREE.Vector3(-12.5, 0.8, 15),
-    new THREE.Vector3(15, 0.8, -12.5),
-    new THREE.Vector3(12.5, 0.8, 15),
-    new THREE.Vector3(-30, 0.8, -27.5),
-    new THREE.Vector3(-27.5, 0.8, 30),
-    new THREE.Vector3(30, 0.8, -27.5),
-    new THREE.Vector3(27.5, 0.8, 30),
-  ];
+  private spawnPoints: THREE.Vector3[] = [];
 
   constructor(scene: THREE.Scene, player: Player, enemyManager: EnemyManager, fxManager: FXManager, audioSynth: AudioSynth) {
     this.scene = scene;
