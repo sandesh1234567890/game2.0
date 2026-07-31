@@ -90,6 +90,8 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 30px;
+  max-height: 95vh;
+  overflow-y: auto;
 }
 
 .menu-header {
@@ -195,8 +197,8 @@ body, html {
 }
 
 .loadout-options {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
@@ -206,9 +208,10 @@ body, html {
   padding: 15px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border-left: 3px solid transparent;
+  border-top: 3px solid transparent;
   display: flex;
   flex-direction: column;
+  min-height: 100px;
 }
 
 .loadout-card:hover {
@@ -219,7 +222,7 @@ body, html {
 .loadout-card.active {
   background: rgba(0, 255, 204, 0.05);
   border-color: var(--color-primary-glow);
-  border-left-color: var(--color-primary);
+  border-top-color: var(--color-primary);
 }
 
 .weapon-class {
