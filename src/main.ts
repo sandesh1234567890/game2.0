@@ -421,10 +421,16 @@ class Game {
           }
         }
 
-        // Shotgun screen shake
-        if (weapon.type === 'shotgun') {
-          this.triggerScreenShake(0.15);
+        // Trigger weapon-specific screen shake (including when in scope/ADS)
+        let intensity = 0.035; // base for pistol/SMG
+        if (weapon.type === 'rifle') intensity = 0.055;
+        else if (weapon.type === 'sniper') intensity = 0.16;
+        else if (weapon.type === 'shotgun') intensity = 0.22;
+
+        if (this.weaponManager.isADS) {
+          intensity *= 0.65; // scale down slightly in ADS/scope to remain usable but maintain heavy feel
         }
+        this.triggerScreenShake(intensity);
       }
     }
   }
