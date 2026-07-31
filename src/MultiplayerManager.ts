@@ -85,8 +85,28 @@ export class MultiplayerManager {
       debug: 1
     });
 
+    let retries = 0;
+    const maxRetries = 3;
+    const hostId = `peer-${this.roomCode}-host`;
+
+    const connectToHost = () => {
+      if (!this.peer || this.peer.destroyed) return;
+      console.log(`Connecting to host (Attempt ${retries + 1}/${maxRetries})...`);
+      const conn = this.peer.connect(hostId);
+      this.setupConnection(conn);
+    };
+
     this.peer.on('error', (err: any) => {
       console.error('PeerJS error:', err);
+      
+      // If host is not found/unavailable, run client retry connectToHost
+      if (err.type === 'peer-unavailable' && !this.isHost && retries < maxRetries) {
+        retries++;
+        console.warn(`Host peer not registered yet. Retrying connection (${retries}/${maxRetries})...`);
+        setTimeout(connectToHost, 1500);
+        return; // Suppress connection error UI during retry attempts
+      }
+
       if (this.onPlayerJoined) {
         this.onPlayerJoined([
           { name: `⚠️ CONNECTION ERROR: ${err.type || err.message}`, team: 'alpha', isLocal: true, isReady: false }
@@ -99,27 +119,6 @@ export class MultiplayerManager {
         if (this.onRoomCreated) this.onRoomCreated(this.roomCode);
         this.updateLobbyList();
       } else {
-        // Connect to host peer directly with retry loops
-        const hostId = `peer-${this.roomCode}-host`;
-        let retries = 0;
-        const maxRetries = 3;
-
-        const connectToHost = () => {
-          if (!this.peer || this.peer.destroyed) return;
-          console.log(`Connecting to host (Attempt ${retries + 1}/${maxRetries})...`);
-          
-          const conn = this.peer.connect(hostId);
-          this.setupConnection(conn);
-          
-          conn.on('error', (err) => {
-            console.warn(`Connection attempt to host failed:`, err);
-            if (retries < maxRetries) {
-              retries++;
-              setTimeout(connectToHost, 1500);
-            }
-          });
-        };
-
         connectToHost();
         if (this.onRoomCreated) this.onRoomCreated(this.roomCode);
       }
