@@ -5,7 +5,6 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
-import Stats from 'stats.js';
 
 import { Input } from './Input';
 import { Player } from './Player';
@@ -62,17 +61,9 @@ class Game {
   private originalFogColor = new THREE.Color(0xd2b48c);
   private cinematicPass!: ShaderPass;
 
-  // Profiling
-  private stats: Stats;
-
   constructor() {
     this.container = document.getElementById('canvas-container')!;
     
-    // Initialize Stats.js
-    this.stats = new Stats();
-    this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-    document.body.appendChild(this.stats.dom);
-
     this.initEngine();
     this.initSystems();
     this.setupControlBindings();
@@ -422,7 +413,6 @@ class Game {
 
   private animate = () => {
     requestAnimationFrame(this.animate);
-    this.stats.begin();
 
     const now = performance.now();
     const dt = Math.min((now - this.lastTime) / 1000, 0.1);
@@ -583,7 +573,6 @@ class Game {
       this.cinematicPass.uniforms['time'].value = dt * 1000.0;
     }
     this.composer.render();
-    this.stats.end();
   };
 
   private updateAllCollisionBoxes() {
