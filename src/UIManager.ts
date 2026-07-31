@@ -89,7 +89,6 @@ export class UIManager {
 
   // Custom HUD elements
   public btnOpenHudEditor = document.getElementById('btn-open-hud-editor')!;
-  public btnOpenHudEditorMenu = document.getElementById('btn-open-hud-editor-menu')!;
   public hudEditPanel = document.getElementById('hud-edit-panel')!;
   public btnHudSave = document.getElementById('btn-hud-save')!;
   public btnHudReset = document.getElementById('btn-hud-reset')!;
@@ -238,14 +237,6 @@ export class UIManager {
       this.startHUDEditMode();
     });
 
-    this.btnOpenHudEditorMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.mainMenu.classList.remove('active');
-      document.getElementById('mobile-controls')!.style.display = 'block';
-      this.hudEditPanel.style.display = 'flex';
-      this.startHUDEditMode();
-    });
-
     this.btnHudSave.addEventListener('click', (e) => {
       e.stopPropagation();
       this.saveHUDLayout();
@@ -348,9 +339,6 @@ export class UIManager {
     this.pauseMenu.classList.remove('active');
     this.gameOverScreen.classList.remove('active');
     this.btnOpenHudEditorHud.style.display = 'none';
-    
-    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    this.btnOpenHudEditorMenu.style.display = isMobile ? 'block' : 'none';
   }
 
   showHUD() {

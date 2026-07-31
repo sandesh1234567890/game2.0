@@ -161,18 +161,6 @@ export class Input {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         if (touch.clientX > window.innerWidth * 0.4) {
-          // Verify touch isn't inside action buttons container
-          const actionsPanel = document.getElementById('mobile-actions-container')!;
-          const rect = actionsPanel.getBoundingClientRect();
-          if (
-            touch.clientX >= rect.left &&
-            touch.clientX <= rect.right &&
-            touch.clientY >= rect.top &&
-            touch.clientY <= rect.bottom
-          ) {
-            continue;
-          }
-          
           lookTouchId = touch.identifier;
           lastLookPos.x = touch.clientX;
           lastLookPos.y = touch.clientY;
@@ -216,14 +204,12 @@ export class Input {
       btn.addEventListener('touchstart', (e) => {
         if (document.body.classList.contains('hud-editing')) return;
         e.preventDefault();
-        e.stopPropagation();
         action();
       }, { passive: false });
       if (endAction) {
         btn.addEventListener('touchend', (e) => {
           if (document.body.classList.contains('hud-editing')) return;
           e.preventDefault();
-          e.stopPropagation();
           endAction();
         }, { passive: false });
       }
@@ -242,7 +228,6 @@ export class Input {
     shootBtn.addEventListener('touchstart', (e) => {
       if (document.body.classList.contains('hud-editing')) return;
       e.preventDefault();
-      e.stopPropagation();
       this.mouse.left = true;
       
       const touch = e.changedTouches[0];
@@ -254,7 +239,6 @@ export class Input {
     shootBtn.addEventListener('touchmove', (e) => {
       if (shootTouchId === null) return;
       e.preventDefault();
-      e.stopPropagation();
       for (let i = 0; i < e.touches.length; i++) {
         const touch = e.touches[i];
         if (touch.identifier === shootTouchId) {
@@ -292,7 +276,6 @@ export class Input {
     adsBtn.addEventListener('touchstart', (e) => {
       if (document.body.classList.contains('hud-editing')) return;
       e.preventDefault();
-      e.stopPropagation();
       this.mouse.right = !this.mouse.right;
       if (this.mouse.right) {
         adsBtn.classList.add('active');
