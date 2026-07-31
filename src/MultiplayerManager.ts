@@ -85,15 +85,42 @@ export class MultiplayerManager {
       debug: 1
     });
 
+    this.peer.on('error', (err: any) => {
+      console.error('PeerJS error:', err);
+      if (this.onPlayerJoined) {
+        this.onPlayerJoined([
+          { name: `⚠️ CONNECTION ERROR: ${err.type || err.message}`, team: 'alpha', isLocal: true, isReady: false }
+        ]);
+      }
+    });
+
     this.peer.on('open', () => {
       if (this.isHost) {
         if (this.onRoomCreated) this.onRoomCreated(this.roomCode);
         this.updateLobbyList();
       } else {
-        // Connect to host peer directly
+        // Connect to host peer directly with retry loops
         const hostId = `peer-${this.roomCode}-host`;
-        const conn = this.peer!.connect(hostId);
-        this.setupConnection(conn);
+        let retries = 0;
+        const maxRetries = 3;
+
+        const connectToHost = () => {
+          if (!this.peer || this.peer.destroyed) return;
+          console.log(`Connecting to host (Attempt ${retries + 1}/${maxRetries})...`);
+          
+          const conn = this.peer.connect(hostId);
+          this.setupConnection(conn);
+          
+          conn.on('error', (err) => {
+            console.warn(`Connection attempt to host failed:`, err);
+            if (retries < maxRetries) {
+              retries++;
+              setTimeout(connectToHost, 1500);
+            }
+          });
+        };
+
+        connectToHost();
         if (this.onRoomCreated) this.onRoomCreated(this.roomCode);
       }
     });
@@ -107,15 +134,22 @@ export class MultiplayerManager {
   private setupConnection(conn: DataConnection) {
     this.connections[conn.peer] = conn;
 
-    conn.on('open', () => {
+    const onOpen = () => {
       // Send identity info on open
       conn.send({
         type: 'identity',
         id: this.localId,
         name: this.localName,
-        team: this.localTeam
+        team: this.localTeam,
+        isReady: this.isHost ? true : this.localReady
       });
-    });
+    };
+
+    if (conn.open) {
+      onOpen();
+    } else {
+      conn.on('open', onOpen);
+    }
 
     conn.on('data', (data: any) => {
       this.handlePacket(conn.peer, data);
