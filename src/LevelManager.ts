@@ -6,6 +6,9 @@ export class LevelManager {
   collisionBoxes: THREE.Box3[] = [];
   objectsGroup: THREE.Group;
 
+  private dirLight!: THREE.DirectionalLight;
+  private textures: THREE.Texture[] = [];
+
   private floorMat = new THREE.MeshStandardMaterial({
     roughness: 0.8,
     metalness: 0.1
@@ -117,6 +120,8 @@ export class LevelManager {
     wallNorm.repeat.set(12, 3);
     this.wallMat.normalMap = wallNorm;
     this.wallMat.needsUpdate = true;
+
+    this.textures.push(dirtTex, dirtNorm, wallTex, wallNorm);
   }
 
   private createContactShadowTexture(): THREE.Texture {
@@ -422,10 +427,45 @@ export class LevelManager {
     this.scene.add(hemiLight);
 
     // Strong, warm directional sunlight
-    const dirLight = new THREE.DirectionalLight(0xffeedd, 2.5);
-    dirLight.position.set(30, 50, -20);
-    dirLight.castShadow = false; // Disable to fix lag
-    this.scene.add(dirLight);
+    this.dirLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+    this.dirLight.position.set(30, 50, -20);
+    this.dirLight.castShadow = false; // Off by default until ULTRA is selected
+    
+    // Config shadow map settings for high quality & optimization
+    this.dirLight.shadow.mapSize.width = 1024;
+    this.dirLight.shadow.mapSize.height = 1024;
+    this.dirLight.shadow.camera.near = 0.5;
+    this.dirLight.shadow.camera.far = 120;
+    
+    const d = 40;
+    this.dirLight.shadow.camera.left = -d;
+    this.dirLight.shadow.camera.right = d;
+    this.dirLight.shadow.camera.top = d;
+    this.dirLight.shadow.camera.bottom = -d;
+    this.dirLight.shadow.bias = -0.0005;
+
+    this.scene.add(this.dirLight);
+  }
+
+  public setShadowsEnabled(enabled: boolean) {
+    this.dirLight.castShadow = enabled;
+    this.objectsGroup.traverse(node => {
+      if (node instanceof THREE.Mesh) {
+        // Only cast/receive shadow for visual level geometry
+        if (node.material instanceof THREE.MeshStandardMaterial) {
+          node.castShadow = enabled;
+          node.receiveShadow = enabled;
+        }
+      }
+    });
+  }
+
+  public setTextureQuality(ultra: boolean, maxAnisotropy: number) {
+    const value = ultra ? Math.min(maxAnisotropy, 8) : 1;
+    this.textures.forEach(tex => {
+      tex.anisotropy = value;
+      tex.needsUpdate = true;
+    });
   }
 
   private createAtmosphericDust() {

@@ -106,8 +106,9 @@ class Game {
     // Cap pixel ratio to 0.70. This provides a MASSIVE 40-50% FPS boost on almost all screens by slightly reducing internal render resolution while scaling it up to fit the window.
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.70));
     
-    // Disable expensive shadow maps
-    this.renderer.shadowMap.enabled = false;
+    // Enable shadow maps on the renderer so shadow shader variants are pre-compiled and cached
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
@@ -591,18 +592,25 @@ class Game {
       this.bloomPass.enabled = false;
       this.cinematicPass.enabled = false;
       this.fxaaPass.enabled = false;
+      this.levelManager.setShadowsEnabled(false);
+      this.levelManager.setTextureQuality(false, 1);
     } else if (preset === 'medium') {
       this.renderer.setPixelRatio(0.75);
       this.bloomPass.enabled = true;
       this.bloomPass.resolution.set(window.innerWidth / 4, window.innerHeight / 4);
       this.cinematicPass.enabled = true;
       this.fxaaPass.enabled = false;
+      this.levelManager.setShadowsEnabled(false);
+      this.levelManager.setTextureQuality(false, 1);
     } else if (preset === 'ultra') {
       this.renderer.setPixelRatio(1.0);
       this.bloomPass.enabled = true;
       this.bloomPass.resolution.set(window.innerWidth / 2, window.innerHeight / 2);
       this.cinematicPass.enabled = true;
       this.fxaaPass.enabled = true;
+      this.levelManager.setShadowsEnabled(true);
+      const maxAniso = this.renderer.capabilities.getMaxAnisotropy();
+      this.levelManager.setTextureQuality(true, maxAniso);
     }
 
     // Force postprocessing size refresh
