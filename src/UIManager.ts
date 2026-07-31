@@ -600,7 +600,7 @@ export class UIManager {
     const layout: { [id: string]: { left: string; top: string } } = {};
     this.draggableIds.forEach(id => {
       const el = document.getElementById(id);
-      if (el) {
+      if (el && el.style.left && el.style.top) {
         layout[id] = {
           left: el.style.left,
           top: el.style.top
@@ -636,7 +636,7 @@ export class UIManager {
       const positions = JSON.parse(data);
       Object.keys(positions).forEach(id => {
         const el = document.getElementById(id);
-        if (el) {
+        if (el && positions[id] && positions[id].left && positions[id].top) {
           el.style.left = positions[id].left;
           el.style.top = positions[id].top;
           el.style.bottom = 'auto';
