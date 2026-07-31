@@ -17,6 +17,7 @@ import { UIManager } from './UIManager';
 import { AudioSynth } from './AudioSynth';
 import { GameState } from './GameState';
 import { BarrelManager } from './BarrelManager';
+import { GrenadeManager } from './GrenadeManager';
 
 type VisionMode = 'normal' | 'nightvision' | 'thermal';
 
@@ -41,6 +42,7 @@ class Game {
   private audioSynth!: AudioSynth;
   private gameState!: GameState;
   private barrelManager!: BarrelManager;
+  private grenadeManager!: GrenadeManager;
   private allCollisionBoxes: THREE.Box3[] = [];
 
   // State Management
@@ -49,6 +51,7 @@ class Game {
   private waitingForFirstLock = false;
   private visionMode: VisionMode = 'normal';
   private nKeyReleased = true;
+  private gKeyReleased = true;
 
   // Screen shake
   private shakeIntensity = 0;
@@ -203,6 +206,7 @@ class Game {
     this.enemyManager = new EnemyManager(this.scene, this.player, this.allCollisionBoxes, this.gameState);
     this.fxManager = new FXManager(this.scene);
     this.barrelManager = new BarrelManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth);
+    this.grenadeManager = new GrenadeManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth, this.barrelManager, this.allCollisionBoxes);
     this.uiManager = new UIManager(this.player, this.weaponManager, this.enemyManager, this.gameState);
 
     // Wire up streak callbacks
@@ -266,6 +270,7 @@ class Game {
     this.enemyManager.reset();
     this.fxManager.reset();
     this.barrelManager.respawnAll();
+    this.grenadeManager.reset();
 
     this.gameState.resetSession();
     this.gameState.currentWave = 1;
@@ -477,6 +482,7 @@ class Game {
           }
         });
         this.fxManager.update(dt);
+        this.grenadeManager.update(dt);
         this.uiManager.update(dt);
 
         this.handleShooting();
@@ -501,6 +507,23 @@ class Game {
           this.nKeyReleased = true;
         }
 
+        // Grenade throw (G key)
+        if (this.input.keys['g']) {
+          if (this.gKeyReleased && this.player.grenades > 0 && !this.weaponManager.isReloading && !this.weaponManager.isThrowing) {
+            this.gKeyReleased = false;
+            this.weaponManager.playThrowAnimation(0.5);
+            
+            // Throw grenade projectile after weapon starts lowering (e.g. 0.15s delay)
+            setTimeout(() => {
+              if (this.isPlaying && !this.player.isDead) {
+                this.grenadeManager.throwGrenade(this.camera);
+              }
+            }, 150);
+          }
+        } else {
+          this.gKeyReleased = true;
+        }
+
         // Wave management
         this.gameState.clearExpiredStreaks();
 
@@ -512,6 +535,8 @@ class Game {
           this.uiManager.addNotification(`✅ WAVE ${this.gameState.currentWave} COMPLETE! +500 XP`);
           // Refill shield during intermission
           this.player.shield = this.player.maxShield;
+          // Refill grenades
+          this.player.grenades = this.player.maxGrenades;
           // Respawn barrels for next wave
           this.barrelManager.respawnAll();
         }

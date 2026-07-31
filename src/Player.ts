@@ -54,6 +54,8 @@ export class Player {
   private camera: THREE.Camera;
   private audioSynth: AudioSynth;
   public kills = 0;
+  public grenades = 3;
+  public maxGrenades = 3;
   
   // Reusable vectors to prevent GC lag
   private _moveDir = new THREE.Vector3();
@@ -116,6 +118,7 @@ export class Player {
     this.targetRotation.set(0, 0, 0);
     this.stance = 'standing';
     this.currentHeight = 1.8;
+    this.grenades = this.maxGrenades;
   }
 
   applyKnockback(force: THREE.Vector3) {

@@ -57,6 +57,7 @@ export class UIManager {
   private endBestWave = document.getElementById('end-best-wave')!;
   private menuRank = document.getElementById('menu-rank')!;
   private menuBestWave = document.getElementById('menu-best-wave')!;
+  private grenadeCount = document.getElementById('grenade-count')!;
 
   // Internal states
   private hitmarkerTimeout: number | null = null;
@@ -112,6 +113,9 @@ export class UIManager {
     this.ammoReserve.textContent = weapon.ammoInReserve.toString();
     const ammoPercent = (weapon.ammoInMag / weapon.magSize) * 100;
     this.ammoBarFill.style.width = `${ammoPercent}%`;
+
+    // 2.5 Grenades
+    this.grenadeCount.textContent = this.player.grenades.toString();
 
     if (this.weaponManager.isReloading) {
       this.weaponMode.textContent = 'RELOADING...';

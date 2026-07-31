@@ -125,6 +125,9 @@ export class WeaponManager {
   isReloading = false;
   reloadProgress = 0;
   isADS = false;
+  isThrowing = false;
+  throwProgress = 0;
+  throwDuration = 0.5;
 
   // Visual offsets for animation
   weaponGroup: THREE.Group;
@@ -229,6 +232,14 @@ export class WeaponManager {
       this.startReload();
     }
 
+    // Handle throw state
+    if (this.isThrowing) {
+      this.throwProgress += dt;
+      if (this.throwProgress >= this.throwDuration) {
+        this.isThrowing = false;
+      }
+    }
+
     // 3. Sway
     const deltas = this.input.mouseMovement;
     const swayAmount = this.isADS ? 0.0004 : 0.0016;
@@ -244,7 +255,13 @@ export class WeaponManager {
     // 5. Weapon translation
     let targetPos = this.isADS ? weapon.adsPosition : weapon.hipPosition;
 
-    if (this.isReloading) {
+    if (this.isThrowing) {
+      const p = this.throwProgress / this.throwDuration;
+      const verticalOffset = Math.sin(p * Math.PI) * -0.7;
+      this._tempVec1.set(0.0, verticalOffset, 0.0);
+      this._tempVec2.copy(targetPos).add(this._tempVec1);
+      targetPos = this._tempVec2;
+    } else if (this.isReloading) {
       const p = this.reloadProgress / weapon.reloadTime;
       const verticalOffset = Math.sin(p * Math.PI) * -0.28;
       this._tempVec1.set(0.04, verticalOffset, -0.05);
@@ -295,8 +312,8 @@ export class WeaponManager {
   }
 
   private updateLaserBeam() {
-    if (this.isADS || this.isReloading || this.getCurrentWeapon().type === 'sniper') {
-      // Hide laser during ADS, reload, or sniper (scope preferred)
+    if (this.isADS || this.isReloading || this.isThrowing || this.getCurrentWeapon().type === 'sniper') {
+      // Hide laser during ADS, reload, throwing, or sniper (scope preferred)
       this.laserLine.visible = false;
       return;
     }
@@ -330,7 +347,7 @@ export class WeaponManager {
   }
 
   canFire(): boolean {
-    if (this.isReloading) return false;
+    if (this.isReloading || this.isThrowing) return false;
     const weapon = this.getCurrentWeapon();
     if (weapon.ammoInMag <= 0) return false;
 
@@ -377,6 +394,15 @@ export class WeaponManager {
     
     weapon.ammoInMag += available;
     weapon.ammoInReserve -= available;
+  }
+
+  playThrowAnimation(duration: number = 0.5) {
+    this.isThrowing = true;
+    this.throwProgress = 0;
+    this.throwDuration = duration;
+    
+    // Stop ADS when throwing
+    this.isADS = false;
   }
 
   // Build high fidelity procedural weapon models
