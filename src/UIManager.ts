@@ -58,6 +58,30 @@ export class UIManager {
   private menuRank = document.getElementById('menu-rank')!;
   private menuBestWave = document.getElementById('menu-best-wave')!;
   private grenadeCount = document.getElementById('grenade-count')!;
+ 
+  // Multiplayer elements
+  public btnOpenMultiplayer = document.getElementById('btn-open-multiplayer')!;
+  public multiplayerLobbyMenu = document.getElementById('multiplayer-lobby-menu')!;
+  public btnCreateLobby = document.getElementById('btn-create-lobby')!;
+  public btnJoinLobby = document.getElementById('btn-join-lobby')!;
+  public btnSubmitJoinCode = document.getElementById('btn-submit-join-code')!;
+  public joinRoomCodeInput = document.getElementById('join-room-code-input') as HTMLInputElement;
+  public multiplayerNameInput = document.getElementById('multiplayer-name-input') as HTMLInputElement;
+  public btnCancelLobby = document.getElementById('btn-cancel-lobby')!;
+  public btnStartMultiplayer = document.getElementById('btn-start-multiplayer')!;
+  public lobbyCodeValue = document.getElementById('lobby-code-value')!;
+  public lobbyAlphaPlayers = document.getElementById('lobby-alpha-players')!;
+  public lobbyBravoPlayers = document.getElementById('lobby-bravo-players')!;
+  public lobbyJoinInputs = document.getElementById('lobby-join-inputs')!;
+  public hudMultiplayerScores = document.getElementById('hud-multiplayer-scores')!;
+  public scoreAlphaValue = document.getElementById('score-alpha-value')!;
+  public scoreBravoValue = document.getElementById('score-bravo-value')!;
+  public hudWaveContainer = document.getElementById('hud-wave')!;
+  
+  public onCreateRoomClick?: (name: string, team: 'alpha' | 'bravo') => void;
+  public onJoinRoomClick?: (name: string, team: 'alpha' | 'bravo', code: string) => void;
+  public onCancelLobbyClick?: () => void;
+  public onStartMatchClick?: () => void;
 
   // Internal states
   private hitmarkerTimeout: number | null = null;
@@ -109,6 +133,58 @@ export class UIManager {
         }
         this.addNotification(`Graphics: ${preset.toUpperCase()} preset applied.`);
       });
+    });
+
+    // Multiplayer listeners
+    this.btnOpenMultiplayer.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.multiplayerLobbyMenu.classList.add('active');
+    });
+
+    this.btnCancelLobby.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.multiplayerLobbyMenu.classList.remove('active');
+      this.lobbyCodeValue.textContent = 'NOT CONNECTED';
+      this.lobbyAlphaPlayers.innerHTML = '';
+      this.lobbyBravoPlayers.innerHTML = '';
+      this.lobbyJoinInputs.style.display = 'none';
+      if (this.onCancelLobbyClick) this.onCancelLobbyClick();
+    });
+
+    const teamButtons = document.querySelectorAll('.team-btn');
+    teamButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        teamButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    this.btnJoinLobby.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.lobbyJoinInputs.style.display = 'block';
+    });
+
+    this.btnCreateLobby.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const name = this.multiplayerNameInput.value.trim() || 'OPERATOR';
+      const activeTeamBtn = document.querySelector('.team-btn.active')!;
+      const team = activeTeamBtn.getAttribute('data-team')! as 'alpha' | 'bravo';
+      if (this.onCreateRoomClick) this.onCreateRoomClick(name, team);
+    });
+
+    this.btnSubmitJoinCode.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const name = this.multiplayerNameInput.value.trim() || 'OPERATOR';
+      const activeTeamBtn = document.querySelector('.team-btn.active')!;
+      const team = activeTeamBtn.getAttribute('data-team')! as 'alpha' | 'bravo';
+      const code = this.joinRoomCodeInput.value.trim().toUpperCase();
+      if (this.onJoinRoomClick) this.onJoinRoomClick(name, team, code);
+    });
+
+    this.btnStartMultiplayer.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onStartMatchClick) this.onStartMatchClick();
     });
   }
 
@@ -319,5 +395,35 @@ export class UIManager {
         this.radarDots.appendChild(dot);
       }
     });
+  }
+
+  public updateLobbyUI(players: { name: string; team: string; isLocal: boolean }[], isHost: boolean) {
+    this.lobbyAlphaPlayers.innerHTML = '';
+    this.lobbyBravoPlayers.innerHTML = '';
+    
+    players.forEach(p => {
+      const li = document.createElement('li');
+      li.textContent = p.name;
+      if (p.isLocal) {
+        li.className = 'local-player';
+      }
+      
+      if (p.team === 'alpha') {
+        this.lobbyAlphaPlayers.appendChild(li);
+      } else {
+        this.lobbyBravoPlayers.appendChild(li);
+      }
+    });
+
+    if (isHost && players.length >= 2) {
+      this.btnStartMultiplayer.style.display = 'block';
+    } else {
+      this.btnStartMultiplayer.style.display = 'none';
+    }
+  }
+
+  public updateScoresUI(alphaScore: number, bravoScore: number) {
+    this.scoreAlphaValue.textContent = alphaScore.toString();
+    this.scoreBravoValue.textContent = bravoScore.toString();
   }
 }

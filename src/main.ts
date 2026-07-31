@@ -18,6 +18,7 @@ import { AudioSynth } from './AudioSynth';
 import { GameState } from './GameState';
 import { BarrelManager } from './BarrelManager';
 import { GrenadeManager } from './GrenadeManager';
+import { MultiplayerManager } from './MultiplayerManager';
 
 type VisionMode = 'normal' | 'nightvision' | 'thermal';
 
@@ -43,6 +44,7 @@ class Game {
   private gameState!: GameState;
   private barrelManager!: BarrelManager;
   private grenadeManager!: GrenadeManager;
+  private multiplayerManager!: MultiplayerManager;
   private allCollisionBoxes: THREE.Box3[] = [];
 
   // State Management
@@ -203,8 +205,9 @@ class Game {
     this.fxManager = new FXManager(this.scene);
     this.barrelManager = new BarrelManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth);
     this.grenadeManager = new GrenadeManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth, this.barrelManager, this.allCollisionBoxes);
-    
-    // Connect explosion callbacks to camera shake
+    this.multiplayerManager = new MultiplayerManager(this.scene);
+    this.uiManager = new UIManager(this.player, this.weaponManager, this.enemyManager, this.gameState);
+
     this.barrelManager.onExplosion = (intensity) => {
       this.triggerScreenShake(intensity);
     };
@@ -216,6 +219,71 @@ class Game {
 
     this.uiManager.onPresetChange = (preset) => {
       this.setGraphicsPreset(preset);
+    };
+
+    this.uiManager.onPresetChange = (preset) => {
+      this.setGraphicsPreset(preset);
+    };
+
+    // Multiplayer UI Event Wiring
+    this.uiManager.onCreateRoomClick = (name, team) => {
+      this.multiplayerManager.createRoom(name, team);
+    };
+
+    this.uiManager.onJoinRoomClick = (name, team, code) => {
+      this.multiplayerManager.joinRoom(name, team, code);
+    };
+
+    this.uiManager.onCancelLobbyClick = () => {
+      this.multiplayerManager.reset();
+    };
+
+    this.uiManager.onStartMatchClick = () => {
+      this.multiplayerManager.startMatch();
+    };
+
+    // Multiplayer WebRTC Callback Wiring
+    this.multiplayerManager.onRoomCreated = (code) => {
+      this.uiManager.lobbyCodeValue.textContent = code;
+    };
+
+    this.multiplayerManager.onPlayerJoined = (players) => {
+      this.uiManager.updateLobbyUI(players, this.multiplayerManager.isHost);
+    };
+
+    this.multiplayerManager.onMatchStartSignal = () => {
+      this.uiManager.multiplayerLobbyMenu.classList.remove('active');
+      this.startMultiplayerMatch();
+    };
+
+    this.multiplayerManager.onRemoteShot = (origin, direction, isEnemy) => {
+      this.fxManager.createTracer(origin, origin.clone().addScaledVector(direction, 60), isEnemy);
+    };
+
+    this.multiplayerManager.onRemoteGrenade = (origin, dir) => {
+      this.grenadeManager.throwGrenadeFromRemote(origin, dir);
+    };
+
+    this.multiplayerManager.onLocalDamage = (damage) => {
+      this.player.takeDamage(damage);
+      this.audioSynth.playDamage();
+      this.uiManager.triggerDamageFlash();
+      this.triggerScreenShake(0.18);
+    };
+
+    this.multiplayerManager.onScoreUpdate = (alpha, bravo) => {
+      this.uiManager.updateScoresUI(alpha, bravo);
+      this.uiManager.addNotification(`SCORE: Alpha [${alpha}] - Bravo [${bravo}]`);
+      
+      // Win check (25 Kills wins)
+      if (alpha >= 25 || bravo >= 25) {
+        const winningTeam = alpha >= 25 ? 'Team Alpha' : 'Team Bravo';
+        this.uiManager.addNotification(`🏆 MATCH OVER — ${winningTeam.toUpperCase()} WINS!`);
+        setTimeout(() => {
+          this.multiplayerManager.reset();
+          window.location.reload();
+        }, 5000);
+      }
     };
 
     // Wire up streak callbacks
@@ -280,6 +348,11 @@ class Game {
     this.fxManager.reset();
     this.barrelManager.respawnAll();
     this.grenadeManager.reset();
+    this.multiplayerManager.reset();
+
+    // Reset HUD
+    this.uiManager.hudMultiplayerScores.style.display = 'none';
+    this.uiManager.hudWaveContainer.style.display = 'block';
 
     this.gameState.resetSession();
     this.gameState.currentWave = 1;
@@ -384,39 +457,82 @@ class Game {
           // Draw thick tracer for all shots and pellets
           this.fxManager.createTracer(flashPos, hitPoint, false);
 
-          // Check barrel hit first (barrels block bullets and explode)
-          const barrelHit = this.barrelManager.checkRaycastHit(raycaster, weapon.damage);
-          let hitResult: { hit: boolean; headshot: boolean; point?: THREE.Vector3 } = { hit: false, headshot: false };
-          
-          if (barrelHit.hit && barrelHit.point) {
-            this.fxManager.createImpactSparks(barrelHit.point, new THREE.Vector3(0, 1, 0), false);
-            hitPoint.copy(barrelHit.point);
-          } else {
-            // Damage check for enemies
-            hitResult = this.enemyManager.checkRaycastHit(raycaster, weapon.damage);
-            if (hitResult.hit && hitResult.point) {
-              this.fxManager.createImpactSparks(hitResult.point, new THREE.Vector3(0, 1, 0), true);
-              this.uiManager.triggerHitmarker(hitResult.headshot);
-              
-              if (hitResult.headshot) {
-                this.audioSynth.playHeadshot();
-                this.gameState.addKillXP(true);
-                this.uiManager.addNotification("HEADSHOT +250 XP");
-              } else {
-                this.audioSynth.playHitmarker();
-              }
+          // Broadcast shot trace in multiplayer
+          if (this.multiplayerManager.peer && this.multiplayerManager.matchActive) {
+            this.multiplayerManager.broadcastShot(flashPos, raycaster.ray.direction);
+          }
 
-              // Check if this kill completed the hit
-              const killedEnemy = this.enemyManager.enemies.find(e => e.isDead && e.health <= 0 && e.deathTimer < 0.05);
-              if (killedEnemy) {
-                if (!hitResult.headshot) {
-                  this.gameState.addKillXP(false);
-                  this.uiManager.addNotification("+100 XP");
-                }
+          // Check multiplayer remote player hit first
+          let remoteHit: { id: string; headshot: boolean; point: THREE.Vector3 } | null = null;
+          let closestRemoteDist = Infinity;
+
+          for (const id of Object.keys(this.multiplayerManager.remotePlayers)) {
+            const rp = this.multiplayerManager.remotePlayers[id];
+            if (rp.isDead || rp.team === this.multiplayerManager.localTeam) continue;
+
+            if (rp.mesh) {
+              const intersects = raycaster.intersectObjects(rp.mesh.children, true);
+              if (intersects.length > 0 && intersects[0].distance < closestRemoteDist) {
+                closestRemoteDist = intersects[0].distance;
+                const relativeY = intersects[0].point.y - rp.position.y;
+                remoteHit = {
+                  id,
+                  headshot: relativeY > 0.95,
+                  point: intersects[0].point
+                };
               }
-            } else if (intersects.length > 0 && p === 0) {
-              this.fxManager.createImpactSparks(hitPoint, hitNormal, false);
-              this.fxManager.createBulletHole(hitPoint, hitNormal);
+            }
+          }
+
+          if (remoteHit && closestRemoteDist < hitPoint.distanceTo(this.camera.position)) {
+            // We hit a remote enemy player!
+            hitPoint.copy(remoteHit.point);
+            this.fxManager.createImpactSparks(hitPoint, new THREE.Vector3(0, 1, 0), true);
+            this.uiManager.triggerHitmarker(remoteHit.headshot);
+            
+            const damage = remoteHit.headshot ? weapon.damage * 1.8 : weapon.damage;
+            this.multiplayerManager.sendHit(remoteHit.id, damage);
+            
+            if (remoteHit.headshot) {
+              this.audioSynth.playHeadshot();
+            } else {
+              this.audioSynth.playHitmarker();
+            }
+          } else {
+            // Check barrel hit first (barrels block bullets and explode)
+            const barrelHit = this.barrelManager.checkRaycastHit(raycaster, weapon.damage);
+            let hitResult: { hit: boolean; headshot: boolean; point?: THREE.Vector3 } = { hit: false, headshot: false };
+            
+            if (barrelHit.hit && barrelHit.point) {
+              this.fxManager.createImpactSparks(barrelHit.point, new THREE.Vector3(0, 1, 0), false);
+              hitPoint.copy(barrelHit.point);
+            } else {
+              // Damage check for enemies (local bots)
+              hitResult = this.enemyManager.checkRaycastHit(raycaster, weapon.damage);
+              if (hitResult.hit && hitResult.point) {
+                this.fxManager.createImpactSparks(hitResult.point, new THREE.Vector3(0, 1, 0), true);
+                this.uiManager.triggerHitmarker(hitResult.headshot);
+                
+                if (hitResult.headshot) {
+                  this.audioSynth.playHeadshot();
+                  this.gameState.addKillXP(true);
+                  this.uiManager.addNotification("HEADSHOT +250 XP");
+                } else {
+                  this.audioSynth.playHitmarker();
+                }
+
+                // Check if this kill completed the hit
+                const killedEnemy = this.enemyManager.enemies.find(e => e.isDead && e.health <= 0 && e.deathTimer < 0.05);
+                if (killedEnemy) {
+                  if (!hitResult.headshot) {
+                    this.gameState.addKillXP(false);
+                    this.uiManager.addNotification("+100 XP");
+                  }
+                }
+              } else if (intersects.length > 0 && p === 0) {
+                this.fxManager.createImpactSparks(hitPoint, hitNormal, false);
+                this.fxManager.createBulletHole(hitPoint, hitNormal);
+              }
             }
           }
         }
@@ -501,6 +617,19 @@ class Game {
         this.grenadeManager.update(dt);
         this.uiManager.update(dt);
 
+        // Sync multiplayer movements
+        if (this.multiplayerManager.peer && this.multiplayerManager.matchActive) {
+          this.multiplayerManager.broadcastLocalState(
+            this.player.position,
+            this.player.rotation.y,
+            this.player.stance,
+            this.weaponManager.currentWeaponKey,
+            this.player.health,
+            this.player.isDead
+          );
+          this.multiplayerManager.updateRemoteMovement(dt);
+        }
+
         this.handleShooting();
 
         // Weapon switcher (5 weapons)
@@ -534,6 +663,13 @@ class Game {
             setTimeout(() => {
               if (this.isPlaying && !this.player.isDead) {
                 this.grenadeManager.throwGrenade(this.camera);
+                
+                // Broadcast grenade throw in multiplayer
+                if (this.multiplayerManager.peer && this.multiplayerManager.matchActive) {
+                  const throwDir = new THREE.Vector3();
+                  this.camera.getWorldDirection(throwDir);
+                  this.multiplayerManager.broadcastGrenade(this.camera.position, throwDir);
+                }
               }
             }, 150);
           }
@@ -579,14 +715,30 @@ class Game {
 
         // Check match conditions
         if (this.player.isDead) {
-          this.enemyManager.deaths++;
-          this.gameState.onPlayerDeath();
-          this.gameState.updateBestScores(this.enemyManager.kills);
-          this.gameState.commitSession();
-          this.isPlaying = false;
-          this.isGameOver = true;
-          this.input.exitLock();
-          this.uiManager.showGameOver(false);
+          if (this.multiplayerManager.peer && this.multiplayerManager.matchActive) {
+            // Broadcast death and team score increment
+            const killerTeam = this.multiplayerManager.localTeam === 'alpha' ? 'bravo' : 'alpha';
+            this.multiplayerManager.broadcastKill(killerTeam);
+            
+            // Revive and respawn instantly at random point in arena
+            this.player.isDead = false;
+            this.player.health = this.player.maxHealth;
+            this.player.shield = this.player.maxShield;
+            
+            const rx = (Math.random() - 0.5) * 60;
+            const rz = (Math.random() - 0.5) * 60;
+            this.player.position.set(rx, 1.8, rz);
+            this.uiManager.addNotification("🔴 YOU DIED — Respawned in the arena.");
+          } else {
+            this.enemyManager.deaths++;
+            this.gameState.onPlayerDeath();
+            this.gameState.updateBestScores(this.enemyManager.kills);
+            this.gameState.commitSession();
+            this.isPlaying = false;
+            this.isGameOver = true;
+            this.input.exitLock();
+            this.uiManager.showGameOver(false);
+          }
         }
 
       } else {
@@ -638,6 +790,28 @@ class Game {
       this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * this.renderer.getPixelRatio());
       this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * this.renderer.getPixelRatio());
     }
+  }
+
+  private startMultiplayerMatch() {
+    this.isPlaying = true;
+    this.isGameOver = false;
+    this.waitingForFirstLock = true;
+    this.gameState.resetSession();
+    this.player.reset();
+    
+    // Clear standard bots for multiplayer
+    this.enemyManager.reset();
+    this.enemyManager.enemies = [];
+    
+    this.setVisionMode('normal');
+    this.uiManager.showHUD();
+    
+    // Display score panel
+    this.uiManager.hudMultiplayerScores.style.display = 'flex';
+    this.uiManager.hudWaveContainer.style.display = 'none';
+
+    this.uiManager.addNotification("⚡ MULTIPLAYER MATCH COMMENCED! Team Alpha vs Team Bravo.");
+    this.input.requestLock();
   }
 
   private updateAllCollisionBoxes() {

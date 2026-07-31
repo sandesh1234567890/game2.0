@@ -37,7 +37,10 @@
           
           <div class="menu-body">
             <div class="menu-options">
-              <button id="btn-start" class="menu-btn primary">DEPLOY TO COMBAT</button>
+              <div style="display: flex; gap: 15px; width: 100%;">
+                <button id="btn-start" class="menu-btn primary" style="flex: 1;">DEPLOY (SOLO)</button>
+                <button id="btn-open-multiplayer" class="menu-btn" style="flex: 1; border-color: var(--color-secondary); color: var(--color-secondary);">MULTIPLAYER (2V2)</button>
+              </div>
               <div class="loadout-selector">
                 <h3>CHOOSE LOADOUT</h3>
                 <div class="loadout-options">
@@ -98,6 +101,73 @@
         </div>
       </div>
 
+      <!-- Multiplayer Menu Overlay -->
+      <div id="multiplayer-lobby-menu" class="overlay-screen">
+        <div class="menu-content lobby-content">
+          <div class="menu-header">
+            <span class="sub-title">TAC-OPS NETWORKING</span>
+            <h2>MULTIPLAYER LOBBY</h2>
+            <div class="header-line"></div>
+          </div>
+          
+          <div class="lobby-setup-body">
+            <!-- Setup Inputs -->
+            <div class="lobby-inputs">
+              <div class="input-group">
+                <label>OPERATOR NAME</label>
+                <input type="text" id="multiplayer-name-input" value="OPERATOR" maxlength="12">
+              </div>
+              <div class="input-group">
+                <label>CHOOSE TEAM</label>
+                <div class="team-select-options">
+                  <button class="team-btn alpha active" data-team="alpha">TEAM ALPHA (BLUE)</button>
+                  <button class="team-btn bravo" data-team="bravo">TEAM BRAVO (ORANGE)</button>
+                </div>
+              </div>
+              <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <button id="btn-create-lobby" class="menu-btn primary">CREATE ROOM</button>
+                <button id="btn-join-lobby" class="menu-btn">JOIN ROOM</button>
+              </div>
+              <div id="lobby-join-inputs" style="display: none; margin-top: 15px;">
+                <div class="input-group">
+                  <label>ENTER ROOM CODE</label>
+                  <div style="display: flex; gap: 10px;">
+                    <input type="text" id="join-room-code-input" placeholder="AETHER-XXXX" style="flex: 1;">
+                    <button id="btn-submit-join-code" class="menu-btn primary" style="padding: 10px 20px;">CONNECT</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Connected Players List -->
+            <div class="lobby-status-panel">
+              <div class="lobby-code-display">
+                <span>ROOM CODE:</span>
+                <span id="lobby-code-value">NOT CONNECTED</span>
+              </div>
+              <div class="players-teams-display">
+                <div class="team-list alpha">
+                  <h4>TEAM ALPHA</h4>
+                  <ul id="lobby-alpha-players">
+                    <!-- players sync dynamically -->
+                  </ul>
+                </div>
+                <div class="team-list bravo">
+                  <h4>TEAM BRAVO</h4>
+                  <ul id="lobby-bravo-players">
+                    <!-- players sync dynamically -->
+                  </ul>
+                </div>
+              </div>
+              <div style="display: flex; gap: 15px; margin-top: 20px; justify-content: flex-end;">
+                <button id="btn-cancel-lobby" class="menu-btn danger" style="padding: 10px 20px;">LEAVE</button>
+                <button id="btn-start-multiplayer" class="menu-btn primary" style="padding: 10px 30px; display: none;">START MATCH</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Pause Menu -->
       <div id="pause-menu" class="overlay-screen">
         <div class="pause-content">
@@ -122,6 +192,18 @@
 
       <!-- In-Game HUD -->
       <div id="game-hud">
+        <!-- Multiplayer Scores HUD -->
+        <div id="hud-multiplayer-scores" style="display: none;">
+          <div class="score-display-item alpha">
+            <span>ALPHA:</span>
+            <span id="score-alpha-value" class="val">0</span>
+          </div>
+          <div class="score-display-item bravo">
+            <span>BRAVO:</span>
+            <span id="score-bravo-value" class="val">0</span>
+          </div>
+        </div>
+
         <!-- Reticle / Crosshair -->
         <div id="hud-reticle">
           <div class="reticle-dot"></div>

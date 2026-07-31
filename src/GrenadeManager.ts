@@ -341,6 +341,28 @@ export class GrenadeManager {
     });
   }
 
+  public throwGrenadeFromRemote(position: THREE.Vector3, dir: THREE.Vector3) {
+    const { group, indicator } = this.createGrenadeMesh();
+    group.position.copy(position);
+    
+    // Throw velocity
+    const velocity = dir.clone().multiplyScalar(16.0);
+    velocity.y += 4.5;
+
+    this.grenades.push({
+      mesh: group,
+      indicatorMesh: indicator,
+      position: position.clone(),
+      velocity: velocity,
+      timer: 0.0,
+      rotationSpeed: new THREE.Vector3(
+        (Math.random() - 0.5) * 8.0,
+        (Math.random() - 0.5) * 8.0,
+        (Math.random() - 0.5) * 8.0
+      )
+    });
+  }
+
   public reset() {
     this.grenades.forEach(g => this.scene.remove(g.mesh));
     this.grenades = [];
