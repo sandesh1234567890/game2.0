@@ -514,6 +514,7 @@ export class EnemyManager {
     this.enemies.forEach(e => this.scene.remove(e.mesh));
     this.enemies = [];
     this.kills = 0;
+    this.deaths = 0;
     this.spawnedCount = 0;
     this.waveEnemiesRemaining = 0;
     this.waveEnemiesSpawned = 0;
