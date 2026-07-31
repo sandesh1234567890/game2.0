@@ -89,6 +89,7 @@ export class UIManager {
 
   // Custom HUD elements
   public btnOpenHudEditor = document.getElementById('btn-open-hud-editor')!;
+  public btnOpenHudEditorMenu = document.getElementById('btn-open-hud-editor-menu')!;
   public hudEditPanel = document.getElementById('hud-edit-panel')!;
   public btnHudSave = document.getElementById('btn-hud-save')!;
   public btnHudReset = document.getElementById('btn-hud-reset')!;
@@ -237,6 +238,14 @@ export class UIManager {
       this.startHUDEditMode();
     });
 
+    this.btnOpenHudEditorMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.mainMenu.classList.remove('active');
+      document.getElementById('mobile-controls')!.style.display = 'block';
+      this.hudEditPanel.style.display = 'flex';
+      this.startHUDEditMode();
+    });
+
     this.btnHudSave.addEventListener('click', (e) => {
       e.stopPropagation();
       this.saveHUDLayout();
@@ -339,6 +348,9 @@ export class UIManager {
     this.pauseMenu.classList.remove('active');
     this.gameOverScreen.classList.remove('active');
     this.btnOpenHudEditorHud.style.display = 'none';
+    
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    this.btnOpenHudEditorMenu.style.display = isMobile ? 'block' : 'none';
   }
 
   showHUD() {
@@ -353,6 +365,8 @@ export class UIManager {
 
   showPauseMenu() {
     this.pauseMenu.classList.add('active');
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    this.btnOpenHudEditor.style.display = isMobile ? 'block' : 'none';
   }
 
   hidePauseMenu() {
@@ -556,8 +570,12 @@ export class UIManager {
   private exitHUDEditMode() {
     this.hudEditPanel.style.display = 'none';
     
-    // Only show pause menu if we were already paused
+    // If not in match, return to main menu and hide mobile controls overlay
     if (this.hudContainer.style.display !== 'block') {
+      this.mainMenu.classList.add('active');
+      document.getElementById('mobile-controls')!.style.display = 'none';
+    } else {
+      // Only show pause menu if we were already paused
       this.pauseMenu.classList.add('active');
     }
 
