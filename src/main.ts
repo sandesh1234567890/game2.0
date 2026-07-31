@@ -16,6 +16,7 @@ import { FXManager } from './FXManager';
 import { UIManager } from './UIManager';
 import { AudioSynth } from './AudioSynth';
 import { GameState } from './GameState';
+import { BarrelManager } from './BarrelManager';
 
 type VisionMode = 'normal' | 'nightvision' | 'thermal';
 
@@ -39,6 +40,8 @@ class Game {
   private uiManager!: UIManager;
   private audioSynth!: AudioSynth;
   private gameState!: GameState;
+  private barrelManager!: BarrelManager;
+  private allCollisionBoxes: THREE.Box3[] = [];
 
   // State Management
   private isPlaying = false;
@@ -192,9 +195,14 @@ class Game {
     this.input = new Input(this.renderer.domElement);
     this.player = new Player(this.camera, this.input, this.audioSynth);
     this.levelManager = new LevelManager(this.scene);
+    
+    // Set up shared dynamic collision box array
+    this.allCollisionBoxes.push(...this.levelManager.collisionBoxes);
+    
     this.weaponManager = new WeaponManager(this.scene, this.camera, this.input, this.audioSynth);
-    this.enemyManager = new EnemyManager(this.scene, this.player, this.levelManager.collisionBoxes, this.gameState);
+    this.enemyManager = new EnemyManager(this.scene, this.player, this.allCollisionBoxes, this.gameState);
     this.fxManager = new FXManager(this.scene);
+    this.barrelManager = new BarrelManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth);
     this.uiManager = new UIManager(this.player, this.weaponManager, this.enemyManager, this.gameState);
 
     // Wire up streak callbacks
@@ -257,6 +265,7 @@ class Game {
 
     this.enemyManager.reset();
     this.fxManager.reset();
+    this.barrelManager.respawnAll();
 
     this.gameState.resetSession();
     this.gameState.currentWave = 1;
@@ -361,31 +370,40 @@ class Game {
           // Draw thick tracer for all shots and pellets
           this.fxManager.createTracer(flashPos, hitPoint, false);
 
-          // Damage check
-          const hitResult = this.enemyManager.checkRaycastHit(raycaster, weapon.damage);
-          if (hitResult.hit && hitResult.point) {
-            this.fxManager.createImpactSparks(hitResult.point, new THREE.Vector3(0, 1, 0), true);
-            this.uiManager.triggerHitmarker(hitResult.headshot);
-            
-            if (hitResult.headshot) {
-              this.audioSynth.playHeadshot();
-              this.gameState.addKillXP(true);
-              this.uiManager.addNotification("HEADSHOT +250 XP");
-            } else {
-              this.audioSynth.playHitmarker();
-            }
-
-            // Check if this kill completed the hit
-            const killedEnemy = this.enemyManager.enemies.find(e => e.isDead && e.health <= 0 && e.deathTimer < 0.05);
-            if (killedEnemy) {
-              if (!hitResult.headshot) {
-                this.gameState.addKillXP(false);
-                this.uiManager.addNotification("+100 XP");
+          // Check barrel hit first (barrels block bullets and explode)
+          const barrelHit = this.barrelManager.checkRaycastHit(raycaster, weapon.damage);
+          let hitResult: { hit: boolean; headshot: boolean; point?: THREE.Vector3 } = { hit: false, headshot: false };
+          
+          if (barrelHit.hit && barrelHit.point) {
+            this.fxManager.createImpactSparks(barrelHit.point, new THREE.Vector3(0, 1, 0), false);
+            hitPoint.copy(barrelHit.point);
+          } else {
+            // Damage check for enemies
+            hitResult = this.enemyManager.checkRaycastHit(raycaster, weapon.damage);
+            if (hitResult.hit && hitResult.point) {
+              this.fxManager.createImpactSparks(hitResult.point, new THREE.Vector3(0, 1, 0), true);
+              this.uiManager.triggerHitmarker(hitResult.headshot);
+              
+              if (hitResult.headshot) {
+                this.audioSynth.playHeadshot();
+                this.gameState.addKillXP(true);
+                this.uiManager.addNotification("HEADSHOT +250 XP");
+              } else {
+                this.audioSynth.playHitmarker();
               }
+
+              // Check if this kill completed the hit
+              const killedEnemy = this.enemyManager.enemies.find(e => e.isDead && e.health <= 0 && e.deathTimer < 0.05);
+              if (killedEnemy) {
+                if (!hitResult.headshot) {
+                  this.gameState.addKillXP(false);
+                  this.uiManager.addNotification("+100 XP");
+                }
+              }
+            } else if (intersects.length > 0 && p === 0) {
+              this.fxManager.createImpactSparks(hitPoint, hitNormal, false);
+              this.fxManager.createBulletHole(hitPoint, hitNormal);
             }
-          } else if (intersects.length > 0 && p === 0) {
-            this.fxManager.createImpactSparks(hitPoint, hitNormal, false);
-            this.fxManager.createBulletHole(hitPoint, hitNormal);
           }
         }
 
@@ -415,7 +433,21 @@ class Game {
       if (canUpdate) {
         this.uiManager.hidePauseMenu();
         
-        this.player.update(dt, (pos, radius) => this.levelManager.collisionCheck(pos, radius));
+        // Update the shared collision list with latest barrel states
+        this.updateAllCollisionBoxes();
+
+        this.player.update(dt, (pos, radius) => {
+          const playerBox = new THREE.Box3(
+            new THREE.Vector3(pos.x - radius, pos.y - 1.0, pos.z - radius),
+            new THREE.Vector3(pos.x + radius, pos.y + 0.2, pos.z + radius)
+          );
+          for (let i = 0; i < this.allCollisionBoxes.length; i++) {
+            if (playerBox.intersectsBox(this.allCollisionBoxes[i])) {
+              return true;
+            }
+          }
+          return false;
+        });
         
         // Laser guidance
         const laserRay = new THREE.Raycaster();
@@ -480,6 +512,8 @@ class Game {
           this.uiManager.addNotification(`✅ WAVE ${this.gameState.currentWave} COMPLETE! +500 XP`);
           // Refill shield during intermission
           this.player.shield = this.player.maxShield;
+          // Respawn barrels for next wave
+          this.barrelManager.respawnAll();
         }
 
         if (!this.gameState.waveActive && this.gameState.intermissionTimer > 0) {
@@ -526,6 +560,12 @@ class Game {
     this.composer.render();
     this.stats.end();
   };
+
+  private updateAllCollisionBoxes() {
+    this.allCollisionBoxes.length = 0;
+    this.allCollisionBoxes.push(...this.levelManager.collisionBoxes);
+    this.allCollisionBoxes.push(...this.barrelManager.collisionBoxes);
+  }
 }
 
 // Start game instance

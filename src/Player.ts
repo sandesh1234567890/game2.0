@@ -118,6 +118,12 @@ export class Player {
     this.currentHeight = 1.8;
   }
 
+  applyKnockback(force: THREE.Vector3) {
+    if (this.isDead) return;
+    this.velocity.add(force);
+    this.isGrounded = false;
+  }
+
   private handleRegen(dt: number) {
     const elapsedSinceDamage = Date.now() - this.lastDamageTime;
     if (elapsedSinceDamage > this.regenDelay) {

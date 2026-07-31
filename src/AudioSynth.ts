@@ -343,4 +343,59 @@ export class AudioSynth {
     osc.start(now);
     osc.stop(now + 0.8);
   }
+
+  // Synthesize explosion sound (sub-bass thump + white noise rumble)
+  playExplosion() {
+    this.initContext();
+    if (!this.ctx || !this.noiseBuffer) return;
+
+    const now = this.ctx.currentTime;
+    const duration = 1.5;
+
+    // 1. Low sub-bass thump
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(90, now);
+    subOsc.frequency.exponentialRampToValueAtTime(10, now + 0.4);
+    subGain.gain.setValueAtTime(1.8, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    subOsc.connect(subGain);
+    subGain.connect(this.ctx.destination);
+    subOsc.start(now);
+    subOsc.stop(now + 0.8);
+
+    // 2. Mid rumble/crack
+    const midOsc = this.ctx.createOscillator();
+    const midGain = this.ctx.createGain();
+    midOsc.type = 'sawtooth';
+    midOsc.frequency.setValueAtTime(120, now);
+    midOsc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+    midGain.gain.setValueAtTime(0.6, now);
+    midGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    midOsc.connect(midGain);
+    midGain.connect(this.ctx.destination);
+    midOsc.start(now);
+    midOsc.stop(now + 0.3);
+
+    // 3. Noise explosion blast
+    const noiseNode = this.ctx.createBufferSource();
+    noiseNode.buffer = this.noiseBuffer;
+    
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(1200, now);
+    noiseFilter.frequency.exponentialRampToValueAtTime(80, now + 1.0);
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(1.2, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noiseNode.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    
+    noiseNode.start(now);
+    noiseNode.stop(now + duration);
+  }
 }

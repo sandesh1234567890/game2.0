@@ -30,6 +30,10 @@ export class FXManager {
   private muzzleFlashMesh: THREE.Mesh;
   private muzzleFlashTimer: number = 0;
 
+  // Explosion light
+  private explosionLight: THREE.PointLight;
+  private explosionLightTimer: number = 0;
+
   // Shared materials to prevent GC pauses
   private playerTracerMat: THREE.Material;
   private enemyTracerMat: THREE.Material;
@@ -46,6 +50,10 @@ export class FXManager {
     this.muzzleFlashMesh = new THREE.Mesh(flashGeo, flashMat);
     this.muzzleFlashMesh.visible = false;
     this.scene.add(this.muzzleFlashMesh);
+
+    // Pre-allocate explosion light
+    this.explosionLight = new THREE.PointLight(0xff7722, 0, 15);
+    this.scene.add(this.explosionLight);
 
     // Pre-allocate tracer materials
     this.playerTracerMat = new THREE.MeshBasicMaterial({ color: 0xffdd44, transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -94,6 +102,14 @@ export class FXManager {
       if (this.muzzleFlashTimer <= 0) {
         this.muzzleFlashLight.intensity = 0;
         this.muzzleFlashMesh.visible = false;
+      }
+    }
+
+    // Update explosion light
+    if (this.explosionLightTimer > 0) {
+      this.explosionLightTimer -= dt;
+      if (this.explosionLightTimer <= 0) {
+        this.explosionLight.intensity = 0;
       }
     }
 
@@ -245,6 +261,68 @@ export class FXManager {
     }
   }
 
+  // Create massive scifi explosion particle effect
+  createExplosion(position: THREE.Vector3) {
+    const particleCount = 75;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities: number[] = [];
+    const colors = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+      const idx = i * 3;
+      // Start at explosion source center
+      positions[idx] = position.x;
+      positions[idx + 1] = position.y + 0.3; // slightly elevated
+      positions[idx + 2] = position.z;
+
+      // Random spherical distribution
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos((Math.random() * 2) - 1);
+      const speed = 4.0 + Math.random() * 11.0;
+      
+      velocities.push(
+        Math.sin(phi) * Math.cos(theta) * speed,
+        Math.sin(phi) * Math.sin(theta) * speed + 3.0, // slight upward boost
+        Math.cos(phi) * speed
+      );
+
+      // Color gradient: fiery orange to bright yellow
+      colors[idx] = 1.0; // Red
+      colors[idx + 1] = 0.2 + Math.random() * 0.7; // Green
+      colors[idx + 2] = 0.0; // Blue
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.45,
+      vertexColors: true,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      opacity: 1.0
+    });
+
+    const mesh = new THREE.Points(geometry, material);
+    this.scene.add(mesh);
+
+    this.particles.push({
+      mesh,
+      geometry,
+      positions,
+      velocities,
+      colors,
+      life: 0,
+      maxLife: 1.0 + Math.random() * 0.5
+    });
+
+    // Spawn dynamic explosion light
+    this.explosionLight.position.copy(position).y += 0.5;
+    this.explosionLight.intensity = 20.0;
+    this.explosionLightTimer = 0.4;
+  }
+
   reset() {
     this.particles.forEach(p => this.scene.remove(p.mesh));
     this.particles = [];
@@ -252,5 +330,8 @@ export class FXManager {
     this.tracers = [];
     this.bulletHoles.forEach(h => this.scene.remove(h.mesh));
     this.bulletHoles = [];
+    this.muzzleFlashLight.intensity = 0;
+    this.muzzleFlashMesh.visible = false;
+    this.explosionLight.intensity = 0;
   }
 }
