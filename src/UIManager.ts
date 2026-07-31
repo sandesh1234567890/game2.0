@@ -62,6 +62,8 @@ export class UIManager {
   // Internal states
   private hitmarkerTimeout: number | null = null;
   private damageFlashAlpha = 0;
+  
+  public onPresetChange?: (preset: 'low' | 'medium' | 'ultra') => void;
 
   constructor(player: Player, weaponManager: WeaponManager, enemyManager: EnemyManager, gameState: GameState) {
     this.player = player;
@@ -84,6 +86,21 @@ export class UIManager {
         const weaponKey = card.getAttribute('data-weapon')!;
         this.weaponManager.selectWeapon(weaponKey);
         this.addNotification(`Loadout: ${this.weaponManager.getCurrentWeapon().name} selected.`);
+      });
+    });
+
+    const presetButtons = document.querySelectorAll('.preset-btn');
+    presetButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        presetButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        const preset = btn.getAttribute('data-preset')! as 'low' | 'medium' | 'ultra';
+        if (this.onPresetChange) {
+          this.onPresetChange(preset);
+        }
+        this.addNotification(`Graphics: ${preset.toUpperCase()} preset applied.`);
       });
     });
   }

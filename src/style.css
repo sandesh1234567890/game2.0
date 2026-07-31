@@ -241,6 +241,52 @@ body, html {
   color: #8899a6;
 }
 
+/* Graphics Presets */
+.graphics-presets-selector {
+  margin-top: 25px;
+}
+
+.graphics-presets-selector h3 {
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: #8899a6;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+}
+
+.preset-options {
+  display: flex;
+  gap: 15px;
+}
+
+.preset-btn {
+  flex: 1;
+  font-family: var(--font-logo);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 0;
+  background: rgba(12, 24, 27, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+  text-align: center;
+  border-radius: 2px;
+}
+
+.preset-btn:hover {
+  background: rgba(12, 24, 27, 0.9);
+  border-color: rgba(0, 255, 204, 0.3);
+}
+
+.preset-btn.active {
+  background: rgba(0, 255, 204, 0.05);
+  border-color: var(--color-primary-glow);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
 /* Instructions Panel */
 .instructions-panel {
   background: rgba(12, 24, 27, 0.4);

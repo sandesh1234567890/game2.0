@@ -61,6 +61,8 @@ class Game {
   private originalBgColor = new THREE.Color(0xd2b48c);
   private originalFogColor = new THREE.Color(0xd2b48c);
   private cinematicPass!: ShaderPass;
+  private bloomPass!: UnrealBloomPass;
+  private fxaaPass!: ShaderPass;
 
   // Profiling
   private stats: Stats;
@@ -117,13 +119,13 @@ class Game {
     this.composer.addPass(renderPass);
 
     // Render bloom at quarter resolution for a massive performance boost (saving 4x GPU fill rate) with almost zero visual loss
-    const bloomPass = new UnrealBloomPass(
+    this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth / 4, window.innerHeight / 4),
       0.4,   // strength
       0.2,   // radius
       0.85   // threshold
     );
-    this.composer.addPass(bloomPass);
+    this.composer.addPass(this.bloomPass);
 
     // Custom Cinematic Shader: Film Grain, Vignette, Chromatic Aberration
     const CinematicShader = {
@@ -164,10 +166,13 @@ class Game {
     this.composer.addPass(this.cinematicPass);
 
     // Add FXAA for buttery smooth edges (fixes jagged edges from lower pixel ratio)
-    const fxaaPass = new ShaderPass(FXAAShader);
-    fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * this.renderer.getPixelRatio());
-    fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * this.renderer.getPixelRatio());
-    this.composer.addPass(fxaaPass);
+    this.fxaaPass = new ShaderPass(FXAAShader);
+    this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * this.renderer.getPixelRatio());
+    this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * this.renderer.getPixelRatio());
+    this.composer.addPass(this.fxaaPass);
+
+    // Disable FXAA by default on MEDIUM (the initial starting preset)
+    this.fxaaPass.enabled = false;
 
     window.addEventListener('resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -175,8 +180,10 @@ class Game {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.composer.setSize(window.innerWidth, window.innerHeight);
       
-      fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * this.renderer.getPixelRatio());
-      fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * this.renderer.getPixelRatio());
+      if (this.fxaaPass.enabled) {
+        this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * this.renderer.getPixelRatio());
+        this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * this.renderer.getPixelRatio());
+      }
     });
   }
 
@@ -196,6 +203,10 @@ class Game {
     this.barrelManager = new BarrelManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth);
     this.grenadeManager = new GrenadeManager(this.scene, this.player, this.enemyManager, this.fxManager, this.audioSynth, this.barrelManager, this.allCollisionBoxes);
     this.uiManager = new UIManager(this.player, this.weaponManager, this.enemyManager, this.gameState);
+
+    this.uiManager.onPresetChange = (preset) => {
+      this.setGraphicsPreset(preset);
+    };
 
     // Wire up streak callbacks
     this.gameState.onStreakActivated = (type, label) => {
@@ -573,6 +584,36 @@ class Game {
     this.composer.render();
     this.stats.end();
   };
+
+  public setGraphicsPreset(preset: 'low' | 'medium' | 'ultra') {
+    if (preset === 'low') {
+      this.renderer.setPixelRatio(0.55);
+      this.bloomPass.enabled = false;
+      this.cinematicPass.enabled = false;
+      this.fxaaPass.enabled = false;
+    } else if (preset === 'medium') {
+      this.renderer.setPixelRatio(0.75);
+      this.bloomPass.enabled = true;
+      this.bloomPass.resolution.set(window.innerWidth / 4, window.innerHeight / 4);
+      this.cinematicPass.enabled = true;
+      this.fxaaPass.enabled = false;
+    } else if (preset === 'ultra') {
+      this.renderer.setPixelRatio(1.0);
+      this.bloomPass.enabled = true;
+      this.bloomPass.resolution.set(window.innerWidth / 2, window.innerHeight / 2);
+      this.cinematicPass.enabled = true;
+      this.fxaaPass.enabled = true;
+    }
+
+    // Force postprocessing size refresh
+    this.composer.setSize(window.innerWidth, window.innerHeight);
+
+    // Update FXAA uniforms if enabled
+    if (this.fxaaPass.enabled) {
+      this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * this.renderer.getPixelRatio());
+      this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * this.renderer.getPixelRatio());
+    }
+  }
 
   private updateAllCollisionBoxes() {
     this.allCollisionBoxes.length = 0;
