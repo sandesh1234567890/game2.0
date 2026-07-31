@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AETHER WARFARE: AAA Tactical Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- Three.js Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Wrapper -->
+    <div id="ui-container">
+      
+      <!-- Damage / Low Health Vignettes -->
+      <div id="damage-vignette" class="vignette"></div>
+      <div id="low-health-vignette" class="vignette-critical"></div>
+      
+      <!-- Main Menu -->
+      <div id="main-menu" class="overlay-screen active">
+        <div class="menu-backdrop"></div>
+        <div class="menu-content">
+          <div class="menu-header">
+            <span class="sub-title">TACTICAL SIMULATION BOOTCAMP</span>
+            <h1 class="main-title">AETHER WARFARE</h1>
+            <div class="header-line"></div>
+            <div class="menu-rank-info">
+              <span class="rank-label">RANK:</span>
+              <span id="menu-rank" class="rank-value">RECRUIT</span>
+              <span id="menu-best-wave" class="best-wave-value">No record</span>
+            </div>
+          </div>
+          
+          <div class="menu-body">
+            <div class="menu-options">
+              <button id="btn-start" class="menu-btn primary">DEPLOY TO COMBAT</button>
+              <div class="loadout-selector">
+                <h3>CHOOSE LOADOUT</h3>
+                <div class="loadout-options">
+                  <div class="loadout-card active" data-weapon="rifle">
+                    <span class="weapon-class">ASSAULT</span>
+                    <span class="weapon-name">M4-VORTEX</span>
+                    <span class="weapon-desc">High fire rate, balanced recoil.</span>
+                  </div>
+                  <div class="loadout-card" data-weapon="smg">
+                    <span class="weapon-class">SMG</span>
+                    <span class="weapon-name">PHANTOM-K</span>
+                    <span class="weapon-desc">Rapid fire, fast ADS transition.</span>
+                  </div>
+                  <div class="loadout-card" data-weapon="sniper">
+                    <span class="weapon-class">SNIPER</span>
+                    <span class="weapon-name">APEX-50</span>
+                    <span class="weapon-desc">One-shot kill, slow chambering.</span>
+                  </div>
+                  <div class="loadout-card" data-weapon="shotgun">
+                    <span class="weapon-class">SHOTGUN</span>
+                    <span class="weapon-name">HAVOC-12</span>
+                    <span class="weapon-desc">6-pellet spread, devastating close range.</span>
+                  </div>
+                  <div class="loadout-card" data-weapon="pistol">
+                    <span class="weapon-class">TACTICAL</span>
+                    <span class="weapon-name">ION-9</span>
+                    <span class="weapon-desc">Laser precision, rapid secondary.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="instructions-panel">
+              <h3>SYSTEM INSTRUCTIONS</h3>
+              <ul class="control-list">
+                <li><span class="key">W, A, S, D</span> Movement</li>
+                <li><span class="key">MOUSE</span> Look / Aim</li>
+                <li><span class="key">L-CLICK</span> Fire Weapon</li>
+                <li><span class="key">R-CLICK</span> Aim Down Sights (ADS)</li>
+                <li><span class="key">SHIFT</span> Tactical Sprint</li>
+                <li><span class="key">SPACE</span> Jump</li>
+                <li><span class="key">C</span> Crouch / Slide</li>
+                <li><span class="key">R</span> Tactical Reload</li>
+                <li><span class="key">1-5</span> Switch Weapons</li>
+                <li><span class="key">N</span> Toggle Vision Mode</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pause Menu -->
+      <div id="pause-menu" class="overlay-screen">
+        <div class="pause-content">
+          <h2>SIMULATION PAUSED</h2>
+          <p>Click anywhere on the screen to resume simulation</p>
+          <div style="display: flex; gap: 20px; justify-content: center; margin-top: 30px;">
+            <button id="btn-resume" class="menu-btn primary">RESUME</button>
+            <button id="btn-restart-pause" class="menu-btn danger">RESTART MISSION</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- In-Game HUD -->
+      <div id="game-hud">
+        <!-- Reticle / Crosshair -->
+        <div id="hud-reticle">
+          <div class="reticle-dot"></div>
+          <div class="reticle-line top"></div>
+          <div class="reticle-line bottom"></div>
+          <div class="reticle-line left"></div>
+          <div class="reticle-line right"></div>
+        </div>
+
+        <!-- Hitmarker -->
+        <div id="hitmarker">
+          <div class="hit-line tl"></div>
+          <div class="hit-line tr"></div>
+          <div class="hit-line bl"></div>
+          <div class="hit-line br"></div>
+        </div>
+
+        <!-- Wave Counter (top center) -->
+        <div id="hud-wave">
+          <div id="wave-counter">WAVE 1</div>
+        </div>
+
+        <!-- XP & Rank Bar (top center below wave) -->
+        <div id="hud-xp-rank">
+          <span id="rank-badge" class="rank-badge-hud">RECRUIT</span>
+          <div class="xp-bar-track">
+            <div id="xp-bar-fill" class="xp-bar-fill"></div>
+          </div>
+          <span id="xp-value" class="xp-value-hud">0 XP</span>
+        </div>
+
+        <!-- Radar -->
+        <div id="hud-radar">
+          <div class="radar-circle">
+            <div class="radar-sweep"></div>
+            <div id="radar-dots"></div>
+            <div class="radar-player-marker"></div>
+          </div>
+          <div class="radar-compass-strip">
+            <div id="compass-strip-ticks">N • • • E • • • S • • • W • • • N</div>
+          </div>
+        </div>
+
+        <!-- Scoreboard -->
+        <div id="hud-score">
+          <div class="score-row">
+            <span class="label">KILLS</span>
+            <span id="score-kills" class="value">0</span>
+          </div>
+          <div class="score-row">
+            <span class="label">DEATHS</span>
+            <span id="score-deaths" class="value">0</span>
+          </div>
+          <div class="score-row">
+            <span class="label">ACTIVE BOTS</span>
+            <span id="score-bots" class="value">0</span>
+          </div>
+        </div>
+
+        <!-- Health & Shield -->
+        <div id="hud-player-stats">
+          <div class="status-bars">
+            <div class="bar-container shield-bar-container">
+              <div class="bar-label">SHIELD</div>
+              <div class="bar-track">
+                <div id="shield-fill" class="bar-fill shield"></div>
+              </div>
+            </div>
+            <div class="bar-container health-bar-container">
+              <div class="bar-label">VITALITY</div>
+              <div class="bar-track">
+                <div id="health-fill" class="bar-fill health"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stats-numeric">
+            <span id="health-value">100</span><span class="divider">/</span><span id="shield-value">100</span>
+          </div>
+          <div id="stance-indicator" class="stance-badge">STANDING</div>
+        </div>
+
+        <!-- Weapon & Ammo -->
+        <div id="hud-weapon-stats">
+          <div class="weapon-info">
+            <div id="weapon-display-name" class="weapon-name-display">M4-VORTEX</div>
+            <div id="weapon-display-mode" class="weapon-mode-display">FULL-AUTO</div>
+          </div>
+          <div class="ammo-info">
+            <span id="ammo-clip" class="ammo-clip-value">30</span>
+            <span class="ammo-divider">/</span>
+            <span id="ammo-reserve" class="ammo-reserve-value">120</span>
+          </div>
+          <div class="ammo-bar-track">
+            <div id="ammo-bar-fill" class="ammo-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="hud-notifications"></div>
+
+        <!-- Wave Intermission Overlay -->
+        <div id="intermission-overlay" class="intermission-screen" style="display:none;">
+          <div class="intermission-content">
+            <h2>WAVE COMPLETE</h2>
+            <p>Next wave in</p>
+            <div id="intermission-timer" class="intermission-countdown">10</div>
+            <p class="intermission-sub">Shield restored • Prepare for combat</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over -->
+      <div id="game-over-screen" class="overlay-screen">
+        <div class="menu-backdrop"></div>
+        <div class="game-over-content">
+          <h1 id="game-over-title">MISSION FAILURE</h1>
+          <p id="game-over-reason">You flatlined during training simulation.</p>
+          <div class="session-stats">
+            <div>Kills: <span id="end-kills">0</span></div>
+            <div>Deaths: <span id="end-deaths">0</span></div>
+            <div>Wave Reached: <span id="end-wave">1</span></div>
+            <div class="xp-earned">XP Earned: <span id="end-xp">+0 XP</span></div>
+            <div>Rank: <span id="end-rank">RECRUIT</span></div>
+            <div class="best-score"><span id="end-best-wave">Best: Wave 0</span></div>
+          </div>
+          <button id="btn-restart" class="menu-btn primary">PLAY AGAIN</button>
+        </div>
+      </div>
+
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
