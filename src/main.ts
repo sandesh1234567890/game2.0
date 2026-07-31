@@ -428,7 +428,7 @@ class Game {
         else if (weapon.type === 'shotgun') intensity = 0.22;
 
         if (this.weaponManager.isADS) {
-          intensity *= 0.65; // scale down slightly in ADS/scope to remain usable but maintain heavy feel
+          intensity *= 1.45; // scale up in ADS/scope to make zoom recoil feel extremely punchy and realistic!
         }
         this.triggerScreenShake(intensity);
       }
