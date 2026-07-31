@@ -221,10 +221,6 @@ class Game {
       this.setGraphicsPreset(preset);
     };
 
-    this.uiManager.onPresetChange = (preset) => {
-      this.setGraphicsPreset(preset);
-    };
-
     // Multiplayer UI Event Wiring
     this.uiManager.onCreateRoomClick = (name, team) => {
       this.multiplayerManager.createRoom(name, team);
@@ -242,9 +238,14 @@ class Game {
       this.multiplayerManager.startMatch();
     };
 
+    this.uiManager.onReadyLobbyClick = () => {
+      this.multiplayerManager.toggleReady();
+    };
+
     // Multiplayer WebRTC Callback Wiring
     this.multiplayerManager.onRoomCreated = (code) => {
       this.uiManager.lobbyCodeValue.textContent = code;
+      this.uiManager.btnCopyCode.style.display = 'block';
     };
 
     this.multiplayerManager.onPlayerJoined = (players) => {

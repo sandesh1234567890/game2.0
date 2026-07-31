@@ -17,6 +17,7 @@ export interface RemotePlayer {
   health: number;
   isDead: boolean;
   score: number;
+  isReady: boolean;
 }
 
 export class MultiplayerManager {
@@ -30,6 +31,7 @@ export class MultiplayerManager {
   public localName = 'Player';
   public localTeam: 'alpha' | 'bravo' = 'alpha';
   public localId = '';
+  public localReady = false;
   public matchActive = false;
 
   // Score stats
@@ -38,7 +40,7 @@ export class MultiplayerManager {
 
   // Callbacks wired to UI / Main Loop
   public onRoomCreated?: (code: string) => void;
-  public onPlayerJoined?: (players: { name: string; team: string; isLocal: boolean }[]) => void;
+  public onPlayerJoined?: (players: { name: string; team: string; isLocal: boolean; isReady: boolean }[]) => void;
   public onMatchStartSignal?: () => void;
   public onRemoteShot?: (origin: THREE.Vector3, direction: THREE.Vector3, isEnemy: boolean) => void;
   public onRemoteGrenade?: (origin: THREE.Vector3, dir: THREE.Vector3) => void;
@@ -54,9 +56,10 @@ export class MultiplayerManager {
     this.localName = playerName;
     this.localTeam = team;
     this.isHost = true;
+    this.localReady = true; // Host is always ready
 
-    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    this.roomCode = `AETHER-${randomSuffix}`;
+    const numericCode = Math.floor(100000 + Math.random() * 900000).toString();
+    this.roomCode = numericCode;
     this.localId = `peer-${this.roomCode}-host`;
 
     this.initPeer(this.localId);
@@ -67,7 +70,8 @@ export class MultiplayerManager {
     this.localName = playerName;
     this.localTeam = team;
     this.isHost = false;
-    this.roomCode = code.toUpperCase();
+    this.localReady = false;
+    this.roomCode = code.trim();
     
     // Generate a random client peer ID
     const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -90,6 +94,7 @@ export class MultiplayerManager {
         const hostId = `peer-${this.roomCode}-host`;
         const conn = this.peer!.connect(hostId);
         this.setupConnection(conn);
+        if (this.onRoomCreated) this.onRoomCreated(this.roomCode);
       }
     });
 
@@ -138,7 +143,8 @@ export class MultiplayerManager {
           weaponKey: 'rifle',
           health: 100,
           isDead: false,
-          score: 0
+          score: 0,
+          isReady: packet.isReady || false
         };
 
         if (this.isHost) {
@@ -165,11 +171,22 @@ export class MultiplayerManager {
               weaponKey: 'rifle',
               health: 100,
               isDead: false,
-              score: 0
+              score: 0,
+              isReady: p.isReady || false
             };
           }
         });
         this.updateLobbyList();
+        break;
+
+      case 'ready':
+        if (this.remotePlayers[peerId]) {
+          this.remotePlayers[peerId].isReady = packet.isReady;
+          if (this.isHost) {
+            this.broadcastLobbySync();
+          }
+          this.updateLobbyList();
+        }
         break;
 
       case 'start_match':
@@ -307,11 +324,11 @@ export class MultiplayerManager {
   // Broadcast sync list of connected peers
   private broadcastLobbySync() {
     const players = [
-      { id: this.localId, name: this.localName, team: this.localTeam }
+      { id: this.localId, name: this.localName, team: this.localTeam, isReady: this.isHost ? true : this.localReady }
     ];
     Object.keys(this.remotePlayers).forEach(k => {
       const rp = this.remotePlayers[k];
-      players.push({ id: rp.id, name: rp.name, team: rp.team });
+      players.push({ id: rp.id, name: rp.name, team: rp.team, isReady: rp.isReady });
     });
 
     this.broadcast({
@@ -320,13 +337,23 @@ export class MultiplayerManager {
     });
   }
 
+  public toggleReady() {
+    if (this.isHost) return; // Host is always ready
+    this.localReady = !this.localReady;
+    this.broadcast({
+      type: 'ready',
+      isReady: this.localReady
+    });
+    this.updateLobbyList();
+  }
+
   private updateLobbyList() {
     const players = [
-      { name: this.localName, team: this.localTeam, isLocal: true }
+      { name: this.localName, team: this.localTeam, isLocal: true, isReady: this.isHost ? true : this.localReady }
     ];
     Object.keys(this.remotePlayers).forEach(k => {
       const rp = this.remotePlayers[k];
-      players.push({ name: rp.name, team: rp.team, isLocal: false });
+      players.push({ name: rp.name, team: rp.team, isLocal: false, isReady: rp.isReady });
     });
 
     if (this.onPlayerJoined) this.onPlayerJoined(players);

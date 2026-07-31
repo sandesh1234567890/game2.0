@@ -130,9 +130,9 @@
               </div>
               <div id="lobby-join-inputs" style="display: none; margin-top: 15px;">
                 <div class="input-group">
-                  <label>ENTER ROOM CODE</label>
+                  <label>ENTER ROOM CODE (NUMERIC)</label>
                   <div style="display: flex; gap: 10px;">
-                    <input type="text" id="join-room-code-input" placeholder="AETHER-XXXX" style="flex: 1;">
+                    <input type="text" id="join-room-code-input" placeholder="6-DIGIT CODE" maxlength="6" pattern="\d*" style="flex: 1;">
                     <button id="btn-submit-join-code" class="menu-btn primary" style="padding: 10px 20px;">CONNECT</button>
                   </div>
                 </div>
@@ -141,10 +141,13 @@
             
             <!-- Connected Players List -->
             <div class="lobby-status-panel">
-              <div class="lobby-code-display">
-                <span>ROOM CODE:</span>
-                <span id="lobby-code-value">NOT CONNECTED</span>
-              </div>
+               <div class="lobby-code-display">
+                 <span>ROOM CODE:</span>
+                 <div style="display: flex; align-items: center; gap: 10px;">
+                   <span id="lobby-code-value">NOT CONNECTED</span>
+                   <button id="btn-copy-code" class="menu-btn" style="padding: 4px 8px; font-size: 10px; border-color: rgba(255,255,255,0.15); display: none;">COPY</button>
+                 </div>
+               </div>
               <div class="players-teams-display">
                 <div class="team-list alpha">
                   <h4>TEAM ALPHA</h4>
@@ -159,10 +162,11 @@
                   </ul>
                 </div>
               </div>
-              <div style="display: flex; gap: 15px; margin-top: 20px; justify-content: flex-end;">
-                <button id="btn-cancel-lobby" class="menu-btn danger" style="padding: 10px 20px;">LEAVE</button>
-                <button id="btn-start-multiplayer" class="menu-btn primary" style="padding: 10px 30px; display: none;">START MATCH</button>
-              </div>
+               <div style="display: flex; gap: 15px; margin-top: 20px; justify-content: flex-end;">
+                 <button id="btn-cancel-lobby" class="menu-btn danger" style="padding: 10px 20px;">LEAVE</button>
+                 <button id="btn-ready-lobby" class="menu-btn primary" style="padding: 10px 20px; display: none;">READY</button>
+                 <button id="btn-start-multiplayer" class="menu-btn primary" style="padding: 10px 30px; display: none;">START MATCH</button>
+               </div>
             </div>
           </div>
         </div>

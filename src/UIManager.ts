@@ -82,6 +82,10 @@ export class UIManager {
   public onJoinRoomClick?: (name: string, team: 'alpha' | 'bravo', code: string) => void;
   public onCancelLobbyClick?: () => void;
   public onStartMatchClick?: () => void;
+  public onReadyLobbyClick?: () => void;
+ 
+  public btnCopyCode = document.getElementById('btn-copy-code')!;
+  public btnReadyLobby = document.getElementById('btn-ready-lobby')!;
 
   // Internal states
   private hitmarkerTimeout: number | null = null;
@@ -148,7 +152,26 @@ export class UIManager {
       this.lobbyAlphaPlayers.innerHTML = '';
       this.lobbyBravoPlayers.innerHTML = '';
       this.lobbyJoinInputs.style.display = 'none';
+      this.btnCopyCode.style.display = 'none';
+      this.btnReadyLobby.style.display = 'none';
+      this.btnReadyLobby.textContent = 'READY';
+      this.btnReadyLobby.classList.remove('active');
       if (this.onCancelLobbyClick) this.onCancelLobbyClick();
+    });
+
+    this.btnCopyCode.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const code = this.lobbyCodeValue.textContent;
+      if (code && code !== 'NOT CONNECTED') {
+        navigator.clipboard.writeText(code).then(() => {
+          this.addNotification("📋 Room Code copied to clipboard!");
+        });
+      }
+    });
+
+    this.btnReadyLobby.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onReadyLobbyClick) this.onReadyLobbyClick();
     });
 
     const teamButtons = document.querySelectorAll('.team-btn');
@@ -397,13 +420,13 @@ export class UIManager {
     });
   }
 
-  public updateLobbyUI(players: { name: string; team: string; isLocal: boolean }[], isHost: boolean) {
+  public updateLobbyUI(players: { name: string; team: string; isLocal: boolean; isReady: boolean }[], isHost: boolean) {
     this.lobbyAlphaPlayers.innerHTML = '';
     this.lobbyBravoPlayers.innerHTML = '';
     
     players.forEach(p => {
       const li = document.createElement('li');
-      li.textContent = p.name;
+      li.textContent = `${p.name} ${p.isReady ? ' — [READY]' : ' — [WAITING]'}`;
       if (p.isLocal) {
         li.className = 'local-player';
       }
@@ -415,7 +438,24 @@ export class UIManager {
       }
     });
 
-    if (isHost && players.length >= 2) {
+    // Update ready button local text state if client
+    if (!isHost) {
+      this.btnReadyLobby.style.display = 'block';
+      const localP = players.find(p => p.isLocal);
+      if (localP && localP.isReady) {
+        this.btnReadyLobby.textContent = 'CANCEL READY';
+        this.btnReadyLobby.classList.add('active');
+      } else {
+        this.btnReadyLobby.textContent = 'READY';
+        this.btnReadyLobby.classList.remove('active');
+      }
+    } else {
+      this.btnReadyLobby.style.display = 'none';
+    }
+
+    // Host can start match only when all players are ready, and at least 2 players are present
+    const allReady = players.every(p => p.isReady);
+    if (isHost && players.length >= 2 && allReady) {
       this.btnStartMultiplayer.style.display = 'block';
     } else {
       this.btnStartMultiplayer.style.display = 'none';
