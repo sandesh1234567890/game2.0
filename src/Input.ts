@@ -104,6 +104,7 @@ export class Input {
     const joyHandle = document.getElementById('mobile-joystick-handle')!;
     
     joyBase.addEventListener('touchstart', () => {
+      if (document.body.classList.contains('hud-editing')) return;
       const rect = joyBase.getBoundingClientRect();
       this.joystickStartPos.x = rect.left + rect.width / 2;
       this.joystickStartPos.y = rect.top + rect.height / 2;
@@ -213,12 +214,14 @@ export class Input {
     const mapButton = (id: string, action: () => void, endAction?: () => void) => {
       const btn = document.getElementById(id)!;
       btn.addEventListener('touchstart', (e) => {
+        if (document.body.classList.contains('hud-editing')) return;
         e.preventDefault();
         e.stopPropagation();
         action();
       }, { passive: false });
       if (endAction) {
         btn.addEventListener('touchend', (e) => {
+          if (document.body.classList.contains('hud-editing')) return;
           e.preventDefault();
           e.stopPropagation();
           endAction();
@@ -237,6 +240,7 @@ export class Input {
     const lastShootPos = { x: 0, y: 0 };
 
     shootBtn.addEventListener('touchstart', (e) => {
+      if (document.body.classList.contains('hud-editing')) return;
       e.preventDefault();
       e.stopPropagation();
       this.mouse.left = true;
@@ -286,6 +290,7 @@ export class Input {
     // Toggle ADS
     const adsBtn = document.getElementById('btn-mobile-ads')!;
     adsBtn.addEventListener('touchstart', (e) => {
+      if (document.body.classList.contains('hud-editing')) return;
       e.preventDefault();
       e.stopPropagation();
       this.mouse.right = !this.mouse.right;

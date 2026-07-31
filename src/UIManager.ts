@@ -532,6 +532,7 @@ export class UIManager {
 
   // HUD Customization Editor logic
   private startHUDEditMode() {
+    document.body.classList.add('hud-editing');
     this.draggableIds.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -568,6 +569,7 @@ export class UIManager {
   }
 
   private exitHUDEditMode() {
+    document.body.classList.remove('hud-editing');
     this.hudEditPanel.style.display = 'none';
     
     // If not in match, return to main menu and hide mobile controls overlay

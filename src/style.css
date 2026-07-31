@@ -1272,13 +1272,12 @@ body, html {
   font-size: 20px;
 }
 
-/* ===== Mobile Virtual Controls ===== */
 #mobile-controls {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   width: 100%;
-  height: 220px;
+  height: 100%;
   z-index: 99;
   pointer-events: none;
   display: none; /* Shown dynamically when touch support detected */
@@ -1318,18 +1317,8 @@ body, html {
   box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
 }
 
-#mobile-actions-container {
-  position: absolute;
-  bottom: 25px;
-  right: 40px;
-  display: grid;
-  grid-template-columns: repeat(4, 55px) 80px;
-  gap: 15px;
-  align-items: center;
-  pointer-events: auto;
-}
-
 .mobile-action-btn {
+  position: absolute;
   width: 55px;
   height: 55px;
   border-radius: 50%;
@@ -1345,18 +1334,16 @@ body, html {
   align-items: center;
   cursor: pointer;
   touch-action: none;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  pointer-events: auto;
 }
 
-.mobile-action-btn:active {
-  background: rgba(0, 255, 204, 0.2);
-  border-color: #00ffcc;
-  transform: scale(0.92);
-}
-
-.mobile-action-btn.primary-shoot {
-  width: 80px;
-  height: 80px;
+/* Default Absolute Positions for Mobile Buttons */
+#btn-mobile-shoot {
+  right: 30px;
+  bottom: 30px;
+  width: 85px;
+  height: 85px;
   font-size: 14px;
   font-weight: 900;
   background: rgba(255, 85, 0, 0.2);
@@ -1365,11 +1352,42 @@ body, html {
   color: #ff5500;
 }
 
-.mobile-action-btn.primary-shoot:active {
+#btn-mobile-shoot:active {
   background: rgba(255, 85, 0, 0.4);
   border-color: #ff7722;
   box-shadow: 0 0 25px rgba(255, 85, 0, 0.5);
   color: #ffffff;
+}
+
+#btn-mobile-ads {
+  right: 135px;
+  bottom: 30px;
+}
+
+#btn-mobile-grenade {
+  right: 135px;
+  bottom: 105px;
+}
+
+#btn-mobile-reload {
+  right: 210px;
+  bottom: 30px;
+}
+
+#btn-mobile-jump {
+  right: 30px;
+  bottom: 135px;
+}
+
+#btn-mobile-nextweapon {
+  right: 210px;
+  bottom: 105px;
+}
+
+.mobile-action-btn:active {
+  background: rgba(0, 255, 204, 0.2);
+  border-color: #00ffcc;
+  transform: scale(0.92);
 }
 
 .mobile-action-btn.active {
