@@ -55,6 +55,7 @@ class Game {
   private nKeyReleased = true;
   private gKeyReleased = true;
   private qKeyReleased = true;
+  private respawnTimerActive = false;
 
   // Screen shake
   private shakeIntensity = 0;
@@ -731,21 +732,37 @@ class Game {
         }
 
         // Check match conditions
-        if (this.player.isDead) {
+        if (this.player.isDead && !this.respawnTimerActive) {
           if (this.multiplayerManager.peer && this.multiplayerManager.matchActive) {
+            this.respawnTimerActive = true;
+            
             // Broadcast death and team score increment
             const killerTeam = this.multiplayerManager.localTeam === 'alpha' ? 'bravo' : 'alpha';
             this.multiplayerManager.broadcastKill(killerTeam);
             
-            // Revive and respawn instantly at random point in arena
-            this.player.isDead = false;
-            this.player.health = this.player.maxHealth;
-            this.player.shield = this.player.maxShield;
-            
-            const rx = (Math.random() - 0.5) * 60;
-            const rz = (Math.random() - 0.5) * 60;
-            this.player.position.set(rx, 1.8, rz);
-            this.uiManager.addNotification("🔴 YOU DIED — Respawned in the arena.");
+            let seconds = 3;
+            const runCountdown = () => {
+              if (seconds > 0) {
+                this.uiManager.addNotification(`🔴 ELIMINATED — Respawning in ${seconds}...`);
+                this.uiManager.triggerDamageFlash();
+                seconds--;
+                setTimeout(runCountdown, 1000);
+              } else {
+                this.player.isDead = false;
+                this.player.health = this.player.maxHealth;
+                this.player.shield = this.player.maxShield;
+                
+                const spawnSide = this.multiplayerManager.localTeam === 'alpha' ? 1.0 : -1.0;
+                const rx = (Math.random() - 0.5) * 10;
+                const rz = spawnSide * (22 + Math.random() * 4);
+                this.player.position.set(rx, 1.8, rz);
+                this.player.velocity.set(0, 0, 0);
+                
+                this.uiManager.addNotification("🔄 DEPLOYED TO ARENA");
+                this.respawnTimerActive = false;
+              }
+            };
+            runCountdown();
           } else {
             this.enemyManager.deaths++;
             this.gameState.onPlayerDeath();
@@ -822,6 +839,13 @@ class Game {
     
     this.setVisionMode('normal');
     this.uiManager.showHUD();
+    
+    // Spawn team-based side splits on match start
+    const spawnSide = this.multiplayerManager.localTeam === 'alpha' ? 1.0 : -1.0;
+    const rx = (Math.random() - 0.5) * 10;
+    const rz = spawnSide * 25;
+    this.player.position.set(rx, 1.8, rz);
+    this.player.velocity.set(0, 0, 0);
     
     // Display score panel
     this.uiManager.hudMultiplayerScores.style.display = 'flex';
