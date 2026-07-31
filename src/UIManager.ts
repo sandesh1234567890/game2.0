@@ -533,6 +533,10 @@ export class UIManager {
   // HUD Customization Editor logic
   private startHUDEditMode() {
     document.body.classList.add('hud-editing');
+    
+    // Ensure in-game edit button is visible so it can be customized/dragged
+    this.btnOpenHudEditorHud.style.display = 'block';
+
     this.draggableIds.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -555,8 +559,19 @@ export class UIManager {
         e.stopPropagation();
         const touch = e.touches[0];
 
-        el.style.left = `${touch.clientX - dragOffset.x}px`;
-        el.style.top = `${touch.clientY - dragOffset.y}px`;
+        const posX = touch.clientX - dragOffset.x;
+        const posY = touch.clientY - dragOffset.y;
+
+        // Clamp boundaries to prevent buttons from moving off-screen
+        const clampX = Math.max(0, Math.min(window.innerWidth - el.offsetWidth, posX));
+        const clampY = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, posY));
+
+        // Save as responsive viewport percentage coordinates
+        const pctX = (clampX / window.innerWidth) * 100;
+        const pctY = (clampY / window.innerHeight) * 100;
+
+        el.style.left = `${pctX}%`;
+        el.style.top = `${pctY}%`;
         el.style.bottom = 'auto';
         el.style.right = 'auto';
       };
@@ -572,6 +587,9 @@ export class UIManager {
     document.body.classList.remove('hud-editing');
     this.hudEditPanel.style.display = 'none';
     
+    // Show EDIT button shortcut only when actively playing in match
+    this.btnOpenHudEditorHud.style.display = this.hudContainer.style.display === 'block' ? 'block' : 'none';
+
     // If not in match, return to main menu and hide mobile controls overlay
     if (this.hudContainer.style.display !== 'block') {
       this.mainMenu.classList.add('active');
