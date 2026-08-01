@@ -97,6 +97,7 @@ export class Input {
 
   public isMobile = false;
   private joystickActive = false;
+  private joystickTouchId: number | null = null;
   private joystickStartPos = { x: 0, y: 0 };
   public joystickVal = { x: 0, y: 0 };
 
@@ -104,17 +105,32 @@ export class Input {
     const joyBase = document.getElementById('mobile-joystick-base')!;
     const joyHandle = document.getElementById('mobile-joystick-handle')!;
     
-    joyBase.addEventListener('touchstart', () => {
+    joyBase.addEventListener('touchstart', (e: TouchEvent) => {
       if (document.body.classList.contains('hud-editing')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const touch = e.changedTouches[0];
+      this.joystickTouchId = touch.identifier;
       const rect = joyBase.getBoundingClientRect();
       this.joystickStartPos.x = rect.left + rect.width / 2;
       this.joystickStartPos.y = rect.top + rect.height / 2;
       this.joystickActive = true;
-    }, { passive: true });
+    }, { passive: false });
 
     joyBase.addEventListener('touchmove', (e: TouchEvent) => {
-      if (!this.joystickActive) return;
-      const touch = e.touches[0];
+      if (!this.joystickActive || this.joystickTouchId === null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      
+      let joystickTouch: Touch | null = null;
+      for (let i = 0; i < e.touches.length; i++) {
+        if (e.touches[i].identifier === this.joystickTouchId) {
+          joystickTouch = e.touches[i];
+          break;
+        }
+      }
+      if (!joystickTouch) return;
+      const touch = joystickTouch;
       const dx = touch.clientX - this.joystickStartPos.x;
       const dy = touch.clientY - this.joystickStartPos.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -137,10 +153,24 @@ export class Input {
       this.keys['s'] = this.joystickVal.y < -0.35;
       this.keys['a'] = this.joystickVal.x < -0.35;
       this.keys['d'] = this.joystickVal.x > 0.35;
-    }, { passive: true });
+    }, { passive: false });
 
-    const resetJoy = () => {
+    const resetJoy = (e: TouchEvent) => {
+      if (this.joystickTouchId === null) return;
+      let found = false;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === this.joystickTouchId) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
       this.joystickActive = false;
+      this.joystickTouchId = null;
       joyHandle.style.left = '50%';
       joyHandle.style.top = '50%';
       this.joystickVal.x = 0;
@@ -150,8 +180,8 @@ export class Input {
       this.keys['a'] = false;
       this.keys['d'] = false;
     };
-    joyBase.addEventListener('touchend', resetJoy, { passive: true });
-    joyBase.addEventListener('touchcancel', resetJoy, { passive: true });
+    joyBase.addEventListener('touchend', resetJoy, { passive: false });
+    joyBase.addEventListener('touchcancel', resetJoy, { passive: false });
 
     // Swipe to Look (Right side of screen)
     let lookTouchId: number | null = null;
@@ -161,6 +191,13 @@ export class Input {
       if (!this.isLocked) return;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
+        
+        // Skip touches that target buttons, action controls, or dialog overlays
+        const target = touch.target as HTMLElement;
+        if (target && (target.tagName === 'BUTTON' || target.closest('.mobile-action-btn') || target.closest('#hud-edit-panel') || target.closest('#pause-menu') || target.closest('.overlay-screen'))) {
+          continue;
+        }
+
         if (touch.clientX > window.innerWidth * 0.4) {
           lookTouchId = touch.identifier;
           lastLookPos.x = touch.clientX;
@@ -205,12 +242,14 @@ export class Input {
       btn.addEventListener('touchstart', (e) => {
         if (document.body.classList.contains('hud-editing')) return;
         e.preventDefault();
+        e.stopPropagation();
         action();
       }, { passive: false });
       if (endAction) {
         btn.addEventListener('touchend', (e) => {
           if (document.body.classList.contains('hud-editing')) return;
           e.preventDefault();
+          e.stopPropagation();
           endAction();
         }, { passive: false });
       }
@@ -229,6 +268,7 @@ export class Input {
     shootBtn.addEventListener('touchstart', (e) => {
       if (document.body.classList.contains('hud-editing')) return;
       e.preventDefault();
+      e.stopPropagation();
       this.mouse.left = true;
       
       const touch = e.changedTouches[0];
@@ -240,6 +280,7 @@ export class Input {
     shootBtn.addEventListener('touchmove', (e) => {
       if (shootTouchId === null) return;
       e.preventDefault();
+      e.stopPropagation();
       for (let i = 0; i < e.touches.length; i++) {
         const touch = e.touches[i];
         if (touch.identifier === shootTouchId) {
@@ -263,6 +304,7 @@ export class Input {
       if (shootTouchId === null) return;
       for (let i = 0; i < e.changedTouches.length; i++) {
         if (e.changedTouches[i].identifier === shootTouchId) {
+          e.stopPropagation();
           this.mouse.left = false;
           shootTouchId = null;
           break;
@@ -277,6 +319,7 @@ export class Input {
     adsBtn.addEventListener('touchstart', (e) => {
       if (document.body.classList.contains('hud-editing')) return;
       e.preventDefault();
+      e.stopPropagation();
       this.mouse.right = !this.mouse.right;
       if (this.mouse.right) {
         adsBtn.classList.add('active');
