@@ -370,11 +370,15 @@ class Game {
 
     const mobilePauseBtn = document.getElementById('btn-mobile-pause');
     if (mobilePauseBtn) {
-      mobilePauseBtn.addEventListener('click', (e) => {
+      const handlePause = (e: Event) => {
+        e.preventDefault();
         e.stopPropagation();
         this.uiManager.showPauseMenu();
         this.isPlaying = false;
-      });
+        this.input.exitLock();
+      };
+      mobilePauseBtn.addEventListener('click', handlePause);
+      mobilePauseBtn.addEventListener('touchstart', handlePause, { passive: false });
     }
   }
 

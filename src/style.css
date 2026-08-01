@@ -60,7 +60,7 @@ body, html {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s ease;
-  z-index: 20;
+  z-index: 200;
 }
 
 .overlay-screen.active {
