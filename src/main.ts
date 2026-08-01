@@ -49,6 +49,7 @@ class Game {
 
   // State Management
   private isPlaying = false;
+  private isPaused = false;
   private isGameOver = false;
   private waitingForFirstLock = false;
   private visionMode: VisionMode = 'normal';
@@ -346,6 +347,7 @@ class Game {
     });
 
     document.getElementById('btn-resume')!.addEventListener('click', () => {
+      this.isPaused = false;
       if (this.input.isMobile) {
         this.uiManager.hidePauseMenu();
         this.isPlaying = true;
@@ -373,8 +375,8 @@ class Game {
       const handlePause = (e: Event) => {
         e.preventDefault();
         e.stopPropagation();
+        this.isPaused = true;
         this.uiManager.showPauseMenu();
-        this.isPlaying = false;
         this.input.exitLock();
       };
       mobilePauseBtn.addEventListener('click', handlePause);
@@ -384,6 +386,7 @@ class Game {
 
   private startGame() {
     this.isPlaying = true;
+    this.isPaused = false;
     this.isGameOver = false;
     this.waitingForFirstLock = true;
     this.gameState.resetSession();
@@ -397,6 +400,7 @@ class Game {
   }
 
   private restartGame() {
+    this.isPaused = false;
     this.isGameOver = false;
     this.waitingForFirstLock = true;
     this.player.reset();
@@ -430,6 +434,7 @@ class Game {
 
   private returnToHome() {
     this.isPlaying = false;
+    this.isPaused = false;
     this.isGameOver = false;
     this.player.reset();
     this.enemyManager.reset();
@@ -642,7 +647,7 @@ class Game {
 
     const isHudEditing = document.body.classList.contains('hud-editing');
     if (this.isPlaying && !isHudEditing) {
-      const canUpdate = this.input.isLocked || this.waitingForFirstLock || this.input.isMobile;
+      const canUpdate = (this.input.isLocked || this.waitingForFirstLock || this.input.isMobile) && !this.isPaused;
       
       if (this.input.isLocked) {
         this.waitingForFirstLock = false;
@@ -906,6 +911,7 @@ class Game {
 
   private startMultiplayerMatch() {
     this.isPlaying = true;
+    this.isPaused = false;
     this.isGameOver = false;
     this.waitingForFirstLock = true;
     this.gameState.resetSession();
