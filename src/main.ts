@@ -794,7 +794,7 @@ class Game {
                 
                 const spawnSide = this.multiplayerManager.localTeam === 'alpha' ? 1.0 : -1.0;
                 const rx = (Math.random() - 0.5) * 10;
-                const rz = spawnSide * (22 + Math.random() * 4);
+                const rz = spawnSide === 1.0 ? (25 + Math.random() * 5) : (-42 + Math.random() * 4);
                 this.player.position.set(rx, 1.8, rz);
                 this.player.velocity.set(0, 0, 0);
                 
@@ -883,7 +883,7 @@ class Game {
     // Spawn team-based side splits on match start
     const spawnSide = this.multiplayerManager.localTeam === 'alpha' ? 1.0 : -1.0;
     const rx = (Math.random() - 0.5) * 10;
-    const rz = spawnSide * 25;
+    const rz = spawnSide === 1.0 ? (25 + Math.random() * 5) : (-42 + Math.random() * 4);
     this.player.position.set(rx, 1.8, rz);
     this.player.velocity.set(0, 0, 0);
     
