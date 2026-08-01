@@ -398,4 +398,38 @@ export class AudioSynth {
     noiseNode.start(now);
     noiseNode.stop(now + duration);
   }
+
+  // Satisfying double-pitch kill alert tone (sci-fi kill sound)
+  playKill() {
+    this.initContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    
+    // First high note
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(1000, now);
+    osc1.frequency.exponentialRampToValueAtTime(1300, now + 0.12);
+    gain1.gain.setValueAtTime(0.2, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc1.connect(gain1);
+    gain1.connect(this.ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.12);
+
+    // Second lower metallic note delayed by 0.05s
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(400, now + 0.05);
+    osc2.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+    gain2.gain.setValueAtTime(0.25, now + 0.05);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc2.connect(gain2);
+    gain2.connect(this.ctx.destination);
+    osc2.start(now + 0.05);
+    osc2.stop(now + 0.25);
+  }
 }

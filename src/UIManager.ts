@@ -109,6 +109,9 @@ export class UIManager {
   // Internal states
   private hitmarkerTimeout: number | null = null;
   private damageFlashAlpha = 0;
+  private killBanner = document.getElementById('hud-kill-banner')!;
+  private killTargetName = document.getElementById('kill-target-name')!;
+  private killBannerTimeout: number | null = null;
   
   public onPresetChange?: (preset: 'low' | 'medium' | 'ultra') => void;
 
@@ -176,6 +179,7 @@ export class UIManager {
       this.btnReadyLobby.style.display = 'none';
       this.btnReadyLobby.textContent = 'READY';
       this.btnReadyLobby.classList.remove('active');
+      this.setLobbyConnectedState(false);
       if (this.onCancelLobbyClick) this.onCancelLobbyClick();
     });
 
@@ -427,6 +431,42 @@ export class UIManager {
     }, 3000);
   }
 
+  showKillBanner(targetName: string) {
+    if (this.killBannerTimeout) {
+      clearTimeout(this.killBannerTimeout);
+    }
+    this.killTargetName.textContent = targetName.toUpperCase();
+    this.killBanner.classList.add('active');
+    
+    this.killBannerTimeout = setTimeout(() => {
+      this.killBanner.classList.remove('active');
+    }, 1200) as unknown as number;
+  }
+
+  triggerKillMarker() {
+    if (this.hitmarkerTimeout) {
+      clearTimeout(this.hitmarkerTimeout);
+    }
+
+    this.hitmarker.className = 'active kill-confirmed';
+
+    this.hitmarkerTimeout = setTimeout(() => {
+      this.hitmarker.className = '';
+    }, 250) as unknown as number;
+  }
+
+  showCenterKillIndicator(text: string) {
+    const el = document.createElement('div');
+    el.className = 'center-kill-indicator';
+    el.textContent = text;
+
+    document.getElementById('ui-container')!.appendChild(el);
+
+    setTimeout(() => {
+      el.remove();
+    }, 1000);
+  }
+
   private updateRadarAndCompass() {
     let headingDegrees = Math.round((this.player.rotation.y * 180) / Math.PI) % 360;
     if (headingDegrees < 0) headingDegrees += 360;
@@ -478,10 +518,51 @@ export class UIManager {
     });
   }
 
+  public setLobbyConnectedState(connected: boolean) {
+    const lobbyInputs = document.querySelector('.lobby-inputs') as HTMLElement;
+    const lobbySetupBody = document.querySelector('.lobby-setup-body') as HTMLElement;
+    if (connected) {
+      if (lobbyInputs) lobbyInputs.style.display = 'none';
+      if (lobbySetupBody) lobbySetupBody.style.gridTemplateColumns = '1fr';
+    } else {
+      if (lobbyInputs) lobbyInputs.style.display = 'flex';
+      if (lobbySetupBody) lobbySetupBody.style.gridTemplateColumns = '1.2fr 1.5fr';
+    }
+  }
+
+  public updateConnectionStatusUI(status: string, code: string, isHost: boolean) {
+    const valSpan = document.getElementById('lobby-code-value')!;
+    if (status === 'idle') {
+      valSpan.textContent = 'NOT CONNECTED';
+      valSpan.style.color = '#ff5500';
+      this.btnReadyLobby.style.display = 'none';
+    } else if (status === 'connecting') {
+      valSpan.textContent = `${code} (CONNECTING...)`;
+      valSpan.style.color = '#ffcc00';
+      this.btnReadyLobby.style.display = 'none';
+    } else if (status === 'connected') {
+      valSpan.textContent = `${code} (CONNECTED)`;
+      valSpan.style.color = '#00ffcc';
+      if (!isHost) {
+        this.btnReadyLobby.style.display = 'block';
+      }
+    } else if (status === 'failed') {
+      valSpan.textContent = `${code} (FAILED)`;
+      valSpan.style.color = '#ff3333';
+      this.btnReadyLobby.style.display = 'none';
+    }
+  }
+
   public updateLobbyUI(players: { name: string; team: string; isLocal: boolean; isReady: boolean }[], isHost: boolean) {
     this.lobbyAlphaPlayers.innerHTML = '';
     this.lobbyBravoPlayers.innerHTML = '';
     
+    // If there is a connection error/timeout, revert the UI state
+    const hasError = players.some(p => p.name.includes('⚠️'));
+    if (hasError) {
+      this.setLobbyConnectedState(false);
+    }
+
     players.forEach(p => {
       const li = document.createElement('li');
       li.textContent = `${p.name} ${p.isReady ? ' — [READY]' : ' — [WAITING]'}`;
@@ -498,7 +579,6 @@ export class UIManager {
 
     // Update ready button local text state if client
     if (!isHost) {
-      this.btnReadyLobby.style.display = 'block';
       const localP = players.find(p => p.isLocal);
       if (localP && localP.isReady) {
         this.btnReadyLobby.textContent = 'CANCEL READY';

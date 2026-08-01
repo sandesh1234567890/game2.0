@@ -38,17 +38,26 @@ export class MultiplayerManager {
   public teamAlphaScore = 0;
   public teamBravoScore = 0;
 
+  // Connection status tracking
+  public connectionStatus: 'idle' | 'connecting' | 'connected' | 'failed' = 'idle';
+
   // Callbacks wired to UI / Main Loop
   public onRoomCreated?: (code: string) => void;
   public onPlayerJoined?: (players: { name: string; team: string; isLocal: boolean; isReady: boolean }[]) => void;
   public onMatchStartSignal?: () => void;
   public onRemoteShot?: (origin: THREE.Vector3, direction: THREE.Vector3, isEnemy: boolean) => void;
   public onRemoteGrenade?: (origin: THREE.Vector3, dir: THREE.Vector3) => void;
-  public onLocalDamage?: (damage: number) => void;
-  public onScoreUpdate?: (alpha: number, bravo: number) => void;
+  public onLocalDamage?: (damage: number, shooterId: string | null) => void;
+  public onScoreUpdate?: (alpha: number, bravo: number, killerId: string | null, killedId: string | null) => void;
+  public onConnectionStatusChange?: (status: 'idle' | 'connecting' | 'connected' | 'failed') => void;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
+  }
+
+  private setConnectionStatus(status: 'idle' | 'connecting' | 'connected' | 'failed') {
+    this.connectionStatus = status;
+    if (this.onConnectionStatusChange) this.onConnectionStatusChange(status);
   }
 
   // Generates lobby code
@@ -57,6 +66,7 @@ export class MultiplayerManager {
     this.localTeam = team;
     this.isHost = true;
     this.localReady = true; // Host is always ready
+    this.setConnectionStatus('connecting');
 
     const numericCode = Math.floor(100000 + Math.random() * 900000).toString();
     this.roomCode = numericCode;
@@ -72,6 +82,7 @@ export class MultiplayerManager {
     this.isHost = false;
     this.localReady = false;
     this.roomCode = code.trim();
+    this.setConnectionStatus('connecting');
     
     // Generate a random client peer ID
     const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -88,16 +99,41 @@ export class MultiplayerManager {
     let retries = 0;
     const maxRetries = 3;
     const hostId = `peer-${this.roomCode}-host`;
+    let connectionTimeout: any = null;
 
     const connectToHost = () => {
       if (!this.peer || this.peer.destroyed) return;
       console.log(`Connecting to host (Attempt ${retries + 1}/${maxRetries})...`);
+      this.setConnectionStatus('connecting');
+
       const conn = this.peer.connect(hostId);
-      this.setupConnection(conn);
+
+      // Set a 5-second timeout to check if the connection opens
+      connectionTimeout = setTimeout(() => {
+        if (!conn.open) {
+          console.warn(`Connection to host timed out. Retrying...`);
+          conn.close();
+          if (retries < maxRetries) {
+            retries++;
+            setTimeout(connectToHost, 1500);
+          } else {
+            this.setConnectionStatus('failed');
+            if (this.onPlayerJoined) {
+              this.onPlayerJoined([
+                { name: `⚠️ CONNECTION TIMEOUT: Could not reach Host.`, team: 'alpha', isLocal: true, isReady: false }
+              ]);
+            }
+          }
+        }
+      }, 5000);
+
+      this.setupConnection(conn, connectionTimeout);
     };
 
     this.peer.on('error', (err: any) => {
       console.error('PeerJS error:', err);
+
+      if (connectionTimeout) clearTimeout(connectionTimeout);
       
       // If host is not found/unavailable, run client retry connectToHost
       if (err.type === 'peer-unavailable' && !this.isHost && retries < maxRetries) {
@@ -107,6 +143,7 @@ export class MultiplayerManager {
         return; // Suppress connection error UI during retry attempts
       }
 
+      this.setConnectionStatus('failed');
       if (this.onPlayerJoined) {
         this.onPlayerJoined([
           { name: `⚠️ CONNECTION ERROR: ${err.type || err.message}`, team: 'alpha', isLocal: true, isReady: false }
@@ -116,6 +153,7 @@ export class MultiplayerManager {
 
     this.peer.on('open', () => {
       if (this.isHost) {
+        this.setConnectionStatus('connected');
         if (this.onRoomCreated) this.onRoomCreated(this.roomCode);
         this.updateLobbyList();
       } else {
@@ -130,10 +168,16 @@ export class MultiplayerManager {
     });
   }
 
-  private setupConnection(conn: DataConnection) {
+  private setupConnection(conn: DataConnection, connectionTimeout?: any) {
     this.connections[conn.peer] = conn;
 
     const onOpen = () => {
+      if (connectionTimeout) clearTimeout(connectionTimeout);
+
+      if (!this.isHost) {
+        this.setConnectionStatus('connected');
+      }
+
       // Send identity info on open
       conn.send({
         type: 'identity',
@@ -157,11 +201,15 @@ export class MultiplayerManager {
     conn.on('close', () => {
       this.removeRemotePlayer(conn.peer);
       delete this.connections[conn.peer];
+      if (!this.isHost && Object.keys(this.connections).length === 0) {
+        this.setConnectionStatus('failed');
+      }
       this.updateLobbyList();
     });
   }
 
   private handlePacket(peerId: string, packet: any) {
+    const senderId = packet.senderId || peerId;
     switch (packet.type) {
       case 'identity':
         this.remotePlayers[peerId] = {
@@ -213,8 +261,8 @@ export class MultiplayerManager {
         break;
 
       case 'ready':
-        if (this.remotePlayers[peerId]) {
-          this.remotePlayers[peerId].isReady = packet.isReady;
+        if (this.remotePlayers[senderId]) {
+          this.remotePlayers[senderId].isReady = packet.isReady;
           if (this.isHost) {
             this.broadcastLobbySync();
             this.relayToOthers(peerId, packet);
@@ -229,7 +277,7 @@ export class MultiplayerManager {
         break;
  
       case 'state':
-        const rp = this.remotePlayers[peerId];
+        const rp = this.remotePlayers[senderId];
         if (rp) {
           rp.targetPosition.set(packet.pos.x, packet.pos.y, packet.pos.z);
           rp.targetRotationY = packet.rotY;
@@ -276,7 +324,7 @@ export class MultiplayerManager {
  
       case 'damage':
         if (packet.targetId === this.localId && this.onLocalDamage) {
-          this.onLocalDamage(packet.damage);
+          this.onLocalDamage(packet.damage, packet.shooterId || null);
         }
         if (this.isHost) {
           // Relay damage to target client!
@@ -286,12 +334,15 @@ export class MultiplayerManager {
           }
         }
         break;
- 
+  
       case 'kill':
         this.teamAlphaScore = packet.alphaScore;
         this.teamBravoScore = packet.bravoScore;
         if (this.onScoreUpdate) {
-          this.onScoreUpdate(this.teamAlphaScore, this.teamBravoScore);
+          this.onScoreUpdate(this.teamAlphaScore, this.teamBravoScore, packet.killerId || null, packet.killedId || null);
+        }
+        if (this.isHost) {
+          this.relayToOthers(peerId, packet);
         }
         break;
     }
@@ -337,6 +388,7 @@ export class MultiplayerManager {
     const packet = {
       type: 'damage',
       targetId,
+      shooterId: this.localId, // Add shooter's ID!
       damage
     };
     if (this.connections[targetId]) {
@@ -351,19 +403,21 @@ export class MultiplayerManager {
   }
 
   // Tells everyone a kill occurred and relays the score
-  public broadcastKill(killerTeam: 'alpha' | 'bravo') {
+  public broadcastKill(killerTeam: 'alpha' | 'bravo', killerId: string | null = null) {
     if (killerTeam === 'alpha') this.teamAlphaScore++;
     else this.teamBravoScore++;
 
     const packet = {
       type: 'kill',
+      killerId, // Add killer's ID
+      killedId: this.localId, // Add who was killed
       alphaScore: this.teamAlphaScore,
       bravoScore: this.teamBravoScore
     };
     this.broadcast(packet);
 
     if (this.onScoreUpdate) {
-      this.onScoreUpdate(this.teamAlphaScore, this.teamBravoScore);
+      this.onScoreUpdate(this.teamAlphaScore, this.teamBravoScore, killerId, this.localId);
     }
   }
 
@@ -500,6 +554,7 @@ export class MultiplayerManager {
 
   private relayToOthers(senderId: string, packet: any) {
     if (!this.isHost) return;
+    packet.senderId = senderId; // Attach original sender's ID
     Object.keys(this.connections).forEach(id => {
       if (id !== senderId) {
         const conn = this.connections[id];
@@ -521,5 +576,6 @@ export class MultiplayerManager {
     this.matchActive = false;
     this.teamAlphaScore = 0;
     this.teamBravoScore = 0;
+    this.setConnectionStatus('idle');
   }
 }

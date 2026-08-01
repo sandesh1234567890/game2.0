@@ -14,6 +14,7 @@ export class Player {
   shield = 100;
   maxShield = 100;
   isDead = false;
+  lastShooterId: string | null = null;
 
   // Timers for regen
   lastDamageTime = 0;
@@ -81,9 +82,10 @@ export class Player {
     this.updateCameraPosition(dt);
   }
 
-  takeDamage(amount: number) {
+  takeDamage(amount: number, shooterId: string | null = null) {
     if (this.isDead) return;
 
+    this.lastShooterId = shooterId;
     this.lastDamageTime = Date.now();
 
     // Damage shields first

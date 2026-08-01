@@ -243,13 +243,21 @@ class Game {
     };
 
     // Multiplayer WebRTC Callback Wiring
-    this.multiplayerManager.onRoomCreated = (code) => {
-      this.uiManager.lobbyCodeValue.textContent = code;
+    this.multiplayerManager.onRoomCreated = () => {
       this.uiManager.btnCopyCode.style.display = 'block';
     };
 
     this.multiplayerManager.onPlayerJoined = (players) => {
       this.uiManager.updateLobbyUI(players, this.multiplayerManager.isHost);
+    };
+
+    this.multiplayerManager.onConnectionStatusChange = (status) => {
+      this.uiManager.updateConnectionStatusUI(status, this.multiplayerManager.roomCode, this.multiplayerManager.isHost);
+      if (status === 'connected') {
+        this.uiManager.setLobbyConnectedState(true);
+      } else if (status === 'failed' || status === 'idle') {
+        this.uiManager.setLobbyConnectedState(false);
+      }
     };
 
     this.multiplayerManager.onMatchStartSignal = () => {
@@ -265,16 +273,42 @@ class Game {
       this.grenadeManager.throwGrenadeFromRemote(origin, dir);
     };
 
-    this.multiplayerManager.onLocalDamage = (damage) => {
-      this.player.takeDamage(damage);
+    this.multiplayerManager.onLocalDamage = (damage, shooterId) => {
+      this.player.takeDamage(damage, shooterId);
       this.audioSynth.playDamage();
       this.uiManager.triggerDamageFlash();
       this.triggerScreenShake(0.18);
     };
 
-    this.multiplayerManager.onScoreUpdate = (alpha, bravo) => {
+    this.multiplayerManager.onScoreUpdate = (alpha, bravo, killerId, killedId) => {
       this.uiManager.updateScoresUI(alpha, bravo);
-      this.uiManager.addNotification(`SCORE: Alpha [${alpha}] - Bravo [${bravo}]`);
+
+      if (killerId && killedId) {
+        if (killerId === this.multiplayerManager.localId) {
+          // We got the kill!
+          this.audioSynth.playKill();
+          this.uiManager.triggerKillMarker();
+          const killedPlayer = this.multiplayerManager.remotePlayers[killedId];
+          const killedName = killedPlayer ? killedPlayer.name : "ENEMY";
+          this.uiManager.showKillBanner(killedName);
+          this.uiManager.showCenterKillIndicator("+100 XP");
+          this.uiManager.addNotification(`💥 ELIMINATED ${killedName.toUpperCase()}!`);
+        } else if (killedId === this.multiplayerManager.localId) {
+          // We were killed!
+          const killerPlayer = this.multiplayerManager.remotePlayers[killerId] || (killerId === `peer-${this.multiplayerManager.roomCode}-host` ? { name: "HOST" } : null);
+          const killerName = killerPlayer ? killerPlayer.name : "HOSTILE";
+          this.uiManager.addNotification(`☠️ KILLED BY ${killerName.toUpperCase()}`);
+        } else {
+          // Someone else got a kill
+          const killerPlayer = this.multiplayerManager.remotePlayers[killerId] || (killerId === `peer-${this.multiplayerManager.roomCode}-host` ? { name: "HOST" } : null);
+          const killerName = killerPlayer ? killerPlayer.name : "PLAYER";
+          const killedPlayer = this.multiplayerManager.remotePlayers[killedId] || (killedId === `peer-${this.multiplayerManager.roomCode}-host` ? { name: "HOST" } : null);
+          const killedName = killedPlayer ? killedPlayer.name : "PLAYER";
+          this.uiManager.addNotification(`📢 ${killerName.toUpperCase()} killed ${killedName.toUpperCase()}`);
+        }
+      } else {
+        this.uiManager.addNotification(`SCORE: Alpha [${alpha}] - Bravo [${bravo}]`);
+      }
       
       // Win check (25 Kills wins)
       if (alpha >= 25 || bravo >= 25) {
@@ -525,12 +559,18 @@ class Game {
                   this.audioSynth.playHitmarker();
                 }
 
-                // Check if this kill completed the hit
+                // Check if this hit killed the enemy
                 const killedEnemy = this.enemyManager.enemies.find(e => e.isDead && e.health <= 0 && e.deathTimer < 0.05);
                 if (killedEnemy) {
-                  if (!hitResult.headshot) {
+                  this.audioSynth.playKill();
+                  this.uiManager.triggerKillMarker();
+                  this.uiManager.showKillBanner(killedEnemy.enemyType || "HOSTILE");
+                  if (hitResult.headshot) {
+                    this.uiManager.showCenterKillIndicator("HEADSHOT +250 XP");
+                  } else {
                     this.gameState.addKillXP(false);
                     this.uiManager.addNotification("+100 XP");
+                    this.uiManager.showCenterKillIndicator("+100 XP");
                   }
                 }
               } else if (intersects.length > 0 && p === 0) {
@@ -738,7 +778,7 @@ class Game {
             
             // Broadcast death and team score increment
             const killerTeam = this.multiplayerManager.localTeam === 'alpha' ? 'bravo' : 'alpha';
-            this.multiplayerManager.broadcastKill(killerTeam);
+            this.multiplayerManager.broadcastKill(killerTeam, this.player.lastShooterId);
             
             let seconds = 3;
             const runCountdown = () => {
@@ -852,7 +892,13 @@ class Game {
     this.uiManager.hudWaveContainer.style.display = 'none';
 
     this.uiManager.addNotification("⚡ MULTIPLAYER MATCH COMMENCED! Team Alpha vs Team Bravo.");
-    this.input.requestLock();
+    if (this.multiplayerManager.isHost || this.input.isMobile) {
+      this.input.requestLock();
+    } else {
+      this.input.exitLock();
+      this.uiManager.showPauseMenu();
+      this.uiManager.addNotification("📢 MATCH STARTED! Click screen to DEPLOY.");
+    }
   }
 
   private updateAllCollisionBoxes() {
