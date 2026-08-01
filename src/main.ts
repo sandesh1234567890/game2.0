@@ -396,6 +396,20 @@ class Game {
       mobilePauseBtn.addEventListener('click', handlePause);
       mobilePauseBtn.addEventListener('touchstart', handlePause, { passive: false });
     }
+
+    // Sensitivity Slider setup
+    const sensSlider = document.getElementById('sensitivity-slider') as HTMLInputElement;
+    const sensValue = document.getElementById('sensitivity-value');
+    if (sensSlider && sensValue) {
+      sensSlider.value = this.input.sensitivity.toString();
+      sensValue.textContent = this.input.sensitivity.toFixed(1);
+      sensSlider.addEventListener('input', (e) => {
+        const val = parseFloat((e.target as HTMLInputElement).value);
+        this.input.sensitivity = val;
+        sensValue.textContent = val.toFixed(1);
+        localStorage.setItem('aether-sensitivity', val.toString());
+      });
+    }
   }
 
   private startGame() {

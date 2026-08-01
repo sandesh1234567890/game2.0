@@ -8,6 +8,7 @@ export class Input {
   constructor(targetElement: HTMLElement) {
     this.targetElement = targetElement;
     this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    this.sensitivity = parseFloat(localStorage.getItem('aether-sensitivity') || '1.0');
     this.setupListeners();
     if (this.isMobile) {
       document.getElementById('mobile-controls')!.style.display = 'block';
@@ -65,8 +66,8 @@ export class Input {
     // Mouse movement listener
     window.addEventListener('mousemove', (e) => {
       if (!this.isLocked) return;
-      this.mouseMovement.x += e.movementX;
-      this.mouseMovement.y += e.movementY;
+      this.mouseMovement.x += e.movementX * this.sensitivity;
+      this.mouseMovement.y += e.movementY * this.sensitivity;
     });
   }
 
@@ -96,6 +97,7 @@ export class Input {
   }
 
   public isMobile = false;
+  public sensitivity = 1.0;
   private joystickActive = false;
   private joystickTouchId: number | null = null;
   private joystickStartPos = { x: 0, y: 0 };
@@ -215,8 +217,8 @@ export class Input {
           const dx = touch.clientX - lastLookPos.x;
           const dy = touch.clientY - lastLookPos.y;
           
-          this.mouseMovement.x += dx * 1.6;
-          this.mouseMovement.y += dy * 1.6;
+          this.mouseMovement.x += dx * 1.6 * this.sensitivity;
+          this.mouseMovement.y += dy * 1.6 * this.sensitivity;
           
           lastLookPos.x = touch.clientX;
           lastLookPos.y = touch.clientY;
@@ -287,8 +289,8 @@ export class Input {
           const dx = touch.clientX - lastShootPos.x;
           const dy = touch.clientY - lastShootPos.y;
           
-          this.mouseMovement.x += dx * 1.6;
-          this.mouseMovement.y += dy * 1.6;
+          this.mouseMovement.x += dx * 1.6 * this.sensitivity;
+          this.mouseMovement.y += dy * 1.6 * this.sensitivity;
           
           lastLookPos.x = touch.clientX; // sync with global looking pos to avoid visual jumps
           lastLookPos.y = touch.clientY;
