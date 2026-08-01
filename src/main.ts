@@ -346,7 +346,12 @@ class Game {
     });
 
     document.getElementById('btn-resume')!.addEventListener('click', () => {
-      this.input.requestLock();
+      if (this.input.isMobile) {
+        this.uiManager.hidePauseMenu();
+        this.isPlaying = true;
+      } else {
+        this.input.requestLock();
+      }
     });
 
     document.getElementById('btn-restart')!.addEventListener('click', () => {
@@ -357,6 +362,20 @@ class Game {
       this.uiManager.hidePauseMenu();
       this.restartGame();
     });
+
+    document.getElementById('btn-exit-home')!.addEventListener('click', () => {
+      this.uiManager.hidePauseMenu();
+      this.returnToHome();
+    });
+
+    const mobilePauseBtn = document.getElementById('btn-mobile-pause');
+    if (mobilePauseBtn) {
+      mobilePauseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.uiManager.showPauseMenu();
+        this.isPlaying = false;
+      });
+    }
   }
 
   private startGame() {
@@ -403,6 +422,20 @@ class Game {
     this.uiManager.showHUD();
     this.uiManager.addNotification("⚡ WAVE 1 — Combat training redeployed.");
     this.input.requestLock();
+  }
+
+  private returnToHome() {
+    this.isPlaying = false;
+    this.isGameOver = false;
+    this.player.reset();
+    this.enemyManager.reset();
+    this.fxManager.reset();
+    this.barrelManager.respawnAll();
+    this.grenadeManager.reset();
+    this.multiplayerManager.reset();
+    this.setVisionMode('normal');
+    this.uiManager.showMainMenu();
+    document.getElementById('mobile-controls')!.style.display = 'none';
   }
 
   private triggerScreenShake(intensity: number) {
@@ -603,8 +636,9 @@ class Game {
     const dt = Math.min((now - this.lastTime) / 1000, 0.1);
     this.lastTime = now;
 
-    if (this.isPlaying) {
-      const canUpdate = this.input.isLocked || this.waitingForFirstLock;
+    const isHudEditing = document.body.classList.contains('hud-editing');
+    if (this.isPlaying && !isHudEditing) {
+      const canUpdate = this.input.isLocked || this.waitingForFirstLock || this.input.isMobile;
       
       if (this.input.isLocked) {
         this.waitingForFirstLock = false;

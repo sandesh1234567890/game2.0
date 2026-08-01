@@ -185,7 +185,7 @@
       <div id="pause-menu" class="overlay-screen">
         <div class="pause-content">
           <h2>SIMULATION PAUSED</h2>
-          <p>Click anywhere on the screen to resume simulation</p>
+          <p>Choose an option below</p>
           
           <div class="pause-presets-selector" style="margin-top: 15px;">
             <h3 style="font-size: 13px; letter-spacing: 2px; color: #8899a6; margin-bottom: 12px; text-transform: uppercase;">Graphics quality</h3>
@@ -196,11 +196,12 @@
             </div>
           </div>
           
-          <button id="btn-open-hud-editor" class="menu-btn" style="display: none; width: 100%; margin-top: 15px; border-color: var(--color-primary); color: var(--color-primary);">CUSTOMIZE HUD LAYOUT</button>
+          <button id="btn-open-hud-editor" class="menu-btn" style="width: 100%; margin-top: 15px; border-color: var(--color-primary); color: var(--color-primary);">CUSTOMIZE HUD LAYOUT</button>
 
-          <div style="display: flex; gap: 20px; justify-content: center; margin-top: 20px;">
-            <button id="btn-resume" class="menu-btn primary">RESUME</button>
-            <button id="btn-restart-pause" class="menu-btn danger">RESTART MISSION</button>
+          <div style="display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; margin-top: 20px;">
+            <button id="btn-resume" class="menu-btn primary" style="width: 100%;">RESUME</button>
+            <button id="btn-restart-pause" class="menu-btn" style="width: 100%;">RESTART MISSION</button>
+            <button id="btn-exit-home" class="menu-btn danger" style="width: 100%;">EXIT TO HOME</button>
           </div>
         </div>
       </div>
@@ -209,6 +210,8 @@
       <div id="game-hud">
         <!-- In-game HUD editor shortcut button (visible on mobile during match) -->
         <button id="btn-open-hud-editor-hud" class="mobile-action-btn" style="position: absolute; top: 15px; right: 175px; z-index: 100; display: none; width: 45px; height: 45px; font-size: 9px; border-color: var(--color-primary); color: var(--color-primary); background: rgba(12,24,27,0.85);">EDIT</button>
+        <!-- In-game Pause button (visible on mobile during match) -->
+        <button id="btn-mobile-pause" class="mobile-action-btn" style="position: absolute; top: 15px; right: 230px; z-index: 100; display: none; width: 45px; height: 45px; font-size: 16px; border-color: var(--color-danger); color: var(--color-danger); background: rgba(12,24,27,0.85);">⏸</button>
         <!-- Multiplayer Scores HUD -->
         <div id="hud-multiplayer-scores" style="display: none;">
           <div class="score-display-item alpha">

@@ -102,7 +102,8 @@ export class UIManager {
     'btn-mobile-ads',
     'btn-mobile-shoot',
     'btn-mobile-nextweapon',
-    'btn-open-hud-editor-hud'
+    'btn-open-hud-editor-hud',
+    'btn-mobile-pause'
   ];
   private touchListeners: { [id: string]: { start: any; move: any } } = {};
 
@@ -349,6 +350,8 @@ export class UIManager {
     this.pauseMenu.classList.remove('active');
     this.gameOverScreen.classList.remove('active');
     this.btnOpenHudEditorHud.style.display = 'none';
+    const mobilePauseBtn = document.getElementById('btn-mobile-pause');
+    if (mobilePauseBtn) mobilePauseBtn.style.display = 'none';
   }
 
   showHUD() {
@@ -359,13 +362,15 @@ export class UIManager {
     
     const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     this.btnOpenHudEditorHud.style.display = isMobile ? 'block' : 'none';
+    const mobilePauseBtn = document.getElementById('btn-mobile-pause');
+    if (mobilePauseBtn) mobilePauseBtn.style.display = isMobile ? 'block' : 'none';
     this.loadCustomHUDLayout();
   }
 
   showPauseMenu() {
     this.pauseMenu.classList.add('active');
-    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    this.btnOpenHudEditor.style.display = isMobile ? 'block' : 'none';
+    // Show Customize HUD button for everyone (desktop & mobile) to allow layout configuration
+    this.btnOpenHudEditor.style.display = 'block';
   }
 
   hidePauseMenu() {
@@ -609,8 +614,16 @@ export class UIManager {
   private startHUDEditMode() {
     document.body.classList.add('hud-editing');
     
+    // Ensure mobile controls are visible so they can be positioned/dragged
+    const mobControls = document.getElementById('mobile-controls');
+    if (mobControls) {
+      mobControls.style.display = 'block';
+    }
+
     // Ensure in-game edit button is visible so it can be customized/dragged
     this.btnOpenHudEditorHud.style.display = 'block';
+    const mobilePauseBtn = document.getElementById('btn-mobile-pause');
+    if (mobilePauseBtn) mobilePauseBtn.style.display = 'block';
 
     this.draggableIds.forEach(id => {
       const el = document.getElementById(id);
@@ -664,14 +677,18 @@ export class UIManager {
     this.hudEditPanel.style.display = 'none';
     
     // Show EDIT button shortcut only when actively playing in match
-    this.btnOpenHudEditorHud.style.display = this.hudContainer.style.display === 'block' ? 'block' : 'none';
+    const inMatch = this.hudContainer.style.display === 'block';
+    this.btnOpenHudEditorHud.style.display = inMatch ? 'block' : 'none';
+    const mobilePauseBtn = document.getElementById('btn-mobile-pause');
+    if (mobilePauseBtn) mobilePauseBtn.style.display = inMatch ? 'block' : 'none';
 
     // If not in match, return to main menu and hide mobile controls overlay
-    if (this.hudContainer.style.display !== 'block') {
+    if (!inMatch) {
       this.mainMenu.classList.add('active');
       document.getElementById('mobile-controls')!.style.display = 'none';
     } else {
-      // Only show pause menu if we were already paused
+      // Keep mobile controls visible but show pause menu overlay
+      document.getElementById('mobile-controls')!.style.display = 'block';
       this.pauseMenu.classList.add('active');
     }
 
