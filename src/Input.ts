@@ -81,6 +81,7 @@ export class Input {
   exitLock() {
     if (this.isMobile) {
       this.isLocked = false;
+      this.clearInputs();
       return;
     }
     document.exitPointerLock();

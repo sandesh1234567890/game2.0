@@ -351,6 +351,7 @@ class Game {
       if (this.input.isMobile) {
         this.uiManager.hidePauseMenu();
         this.isPlaying = true;
+        this.input.requestLock();
       } else {
         this.input.requestLock();
       }
