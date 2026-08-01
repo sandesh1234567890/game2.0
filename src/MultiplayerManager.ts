@@ -128,14 +128,14 @@ export class MultiplayerManager {
 
       const conn = this.peer.connect(hostId);
 
-      // Set a 5-second timeout to check if the connection opens
+      // Set a 12-second timeout to check if the connection opens (crucial for STUN/TURN traversal)
       connectionTimeout = setTimeout(() => {
         if (!conn.open) {
           console.warn(`Connection to host timed out. Retrying...`);
           conn.close();
           if (retries < maxRetries) {
             retries++;
-            setTimeout(connectToHost, 1500);
+            setTimeout(connectToHost, 2500);
           } else {
             this.setConnectionStatus('failed');
             if (this.onPlayerJoined) {
@@ -145,7 +145,7 @@ export class MultiplayerManager {
             }
           }
         }
-      }, 5000);
+      }, 12000);
 
       this.setupConnection(conn, connectionTimeout);
     };
