@@ -108,8 +108,8 @@ class Game {
       this.renderer = new THREE.WebGLRenderer({ antialias: false });
     }
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    // Cap pixel ratio to 0.70. This provides a MASSIVE 40-50% FPS boost on almost all screens by slightly reducing internal render resolution while scaling it up to fit the window.
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.70));
+    // Cap pixel ratio to 1.0 by default to ensure sharp text/edges on high-DPI screens.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
     
     // Enable shadow maps on the renderer so shadow shader variants are pre-compiled and cached
     this.renderer.shadowMap.enabled = true;
@@ -920,14 +920,14 @@ class Game {
 
   public setGraphicsPreset(preset: 'low' | 'medium' | 'ultra') {
     if (preset === 'low') {
-      this.renderer.setPixelRatio(0.55);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.85));
       this.bloomPass.enabled = false;
       this.cinematicPass.enabled = false;
       this.fxaaPass.enabled = false;
       this.levelManager.setShadowsEnabled(false);
       this.levelManager.setTextureQuality(false, 1);
     } else if (preset === 'medium') {
-      this.renderer.setPixelRatio(0.75);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
       this.bloomPass.enabled = true;
       this.bloomPass.resolution.set(window.innerWidth / 4, window.innerHeight / 4);
       this.cinematicPass.enabled = true;
@@ -935,7 +935,7 @@ class Game {
       this.levelManager.setShadowsEnabled(false);
       this.levelManager.setTextureQuality(false, 1);
     } else if (preset === 'ultra') {
-      this.renderer.setPixelRatio(1.0);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
       this.bloomPass.enabled = true;
       this.bloomPass.resolution.set(window.innerWidth / 2, window.innerHeight / 2);
       this.cinematicPass.enabled = true;
