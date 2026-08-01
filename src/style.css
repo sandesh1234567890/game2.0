@@ -1567,3 +1567,54 @@ body, html {
     transform: translate(-50%, -90%) scale(0.9);
   }
 }
+
+/* Portrait orientation warning overlay */
+#portrait-warning {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #030708;
+  color: #00ffcc;
+  z-index: 99999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-hud);
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#portrait-warning h2 {
+  font-family: var(--font-logo);
+  letter-spacing: 3px;
+  margin-top: 15px;
+  margin-bottom: 5px;
+  font-size: 24px;
+}
+
+#portrait-warning p {
+  color: #8899a6;
+  font-size: 13px;
+  margin: 0;
+}
+
+.portrait-warning-icon {
+  font-size: 55px;
+  animation: rotate-warning-device 2s infinite ease-in-out;
+}
+
+@keyframes rotate-warning-device {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+}
+
+/* Show only on mobile when held in portrait mode */
+@media screen and (orientation: portrait) and (max-width: 1024px) {
+  #portrait-warning {
+    display: flex;
+  }
+}

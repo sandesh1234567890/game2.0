@@ -343,11 +343,13 @@ class Game {
     this.uiManager.btnOpenHudEditor.style.display = this.input.isMobile ? 'block' : 'none';
 
     document.getElementById('btn-start')!.addEventListener('click', () => {
+      this.requestFullscreenAndLandscape();
       this.startGame();
     });
 
     document.getElementById('btn-resume')!.addEventListener('click', () => {
       this.isPaused = false;
+      this.requestFullscreenAndLandscape();
       if (this.input.isMobile) {
         this.uiManager.hidePauseMenu();
         this.isPlaying = true;
@@ -369,6 +371,17 @@ class Game {
     document.getElementById('btn-exit-home')!.addEventListener('click', () => {
       this.uiManager.hidePauseMenu();
       this.returnToHome();
+    });
+
+    // Request fullscreen on multiplayer button interactions
+    document.getElementById('btn-open-multiplayer')!.addEventListener('click', () => {
+      this.requestFullscreenAndLandscape();
+    });
+    document.getElementById('btn-create-lobby')!.addEventListener('click', () => {
+      this.requestFullscreenAndLandscape();
+    });
+    document.getElementById('btn-submit-join-code')!.addEventListener('click', () => {
+      this.requestFullscreenAndLandscape();
     });
 
     const mobilePauseBtn = document.getElementById('btn-mobile-pause');
@@ -446,6 +459,38 @@ class Game {
     this.setVisionMode('normal');
     this.uiManager.showMainMenu();
     document.getElementById('mobile-controls')!.style.display = 'none';
+  }
+
+  private requestFullscreenAndLandscape() {
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (!isMobile) return;
+
+    const docEl = document.documentElement as any;
+    const requestFS = docEl.requestFullscreen || 
+                      docEl.mozRequestFullScreen || 
+                      docEl.webkitRequestFullscreen || 
+                      docEl.msRequestFullscreen;
+                      
+    if (requestFS) {
+      requestFS.call(docEl).then(() => {
+        const screenObj = window.screen as any;
+        if (screenObj.orientation && screenObj.orientation.lock) {
+          screenObj.orientation.lock('landscape').catch((err: any) => {
+            console.warn("Screen orientation lock rejected:", err);
+          });
+        } else if (screenObj.lockOrientation) {
+          screenObj.lockOrientation('landscape');
+        } else if (screenObj.webkitLockOrientation) {
+          screenObj.webkitLockOrientation('landscape');
+        } else if (screenObj.mozLockOrientation) {
+          screenObj.mozLockOrientation('landscape');
+        } else if (screenObj.msLockOrientation) {
+          screenObj.msLockOrientation('landscape');
+        }
+      }).catch((err: any) => {
+        console.warn("Fullscreen request rejected:", err);
+      });
+    }
   }
 
   private triggerScreenShake(intensity: number) {
